@@ -625,6 +625,7 @@ class Object BASE_EMBEDDED {
 
   inline bool IsStruct();
 #define DECLARE_STRUCT_PREDICATE(NAME, Name, name) inline bool Is##Name();
+  // 宏展开后是一系列的isName函数
   STRUCT_LIST(DECLARE_STRUCT_PREDICATE)
 #undef DECLARE_STRUCT_PREDICATE
 
@@ -708,6 +709,7 @@ class Object BASE_EMBEDDED {
 // Smis are immediate which means they are NOT allocated in the heap.
 // The this pointer has the following format: [31 bit signed int] 0
 // Smi stands for small integer.
+// 31位代表有符号整形，低位0表示smi标记
 class Smi: public Object {
  public:
   // Returns the integer value.
@@ -827,9 +829,11 @@ class HeapObject: public Object {
   inline void set_map(Map* value);
 
   // Converts an address to a HeapObject pointer.
+  // 对象的地址+对象标记
   static inline HeapObject* FromAddress(Address address);
 
   // Returns the address of this HeapObject.
+  // 对象的真正地址
   inline Address address();
 
   // Iterates over pointers contained in the object (including the Map)
@@ -899,6 +903,7 @@ class HeapObject: public Object {
 
 // The HeapNumber class describes heap allocated numbers that cannot be
 // represented in a Smi (small integer)
+// 存储了数字的堆对象
 class HeapNumber: public HeapObject {
  public:
   // [value]: number value.
@@ -917,7 +922,9 @@ class HeapNumber: public HeapObject {
 #endif
 
   // Layout description.
+  // kSize之前的空间存储map对象的指针
   static const int kValueOffset = HeapObject::kSize;
+  // kValueOffset - kSize之间存储数字的值
   static const int kSize = kValueOffset + kDoubleSize;
 
  private:
@@ -932,10 +939,12 @@ class HeapNumber: public HeapObject {
 class JSObject: public HeapObject {
  public:
   // [properties]: Backing storage for properties.
+  // 宏展开是是定义个properties和set_properties函数，类型是FixedArray
   DECL_ACCESSORS(properties, FixedArray)
   inline void initialize_properties();
 
   // [elements]: The elements in the fast case.
+  // 同上
   DECL_ACCESSORS(elements, HeapObject)
   inline void initialize_elements();
 
@@ -947,6 +956,7 @@ class JSObject: public HeapObject {
   bool KeepInFastCase(int new_capacity);
 
   // Accessors for slow properties
+  // 从fixedArray转成字典
   inline Dictionary* property_dictionary();  // asserts !HasFastProperties
   inline Dictionary* element_dictionary();  // asserts !HasFastElements
 

@@ -203,8 +203,18 @@ namespace v8 { namespace internal {
 class Token {
  public:
   // All token values.
+// 定义宏T
 #define T(name, string, precedence) name,
   enum Value {
+    /*
+      TOKEN_LIST宏展开后变成
+       T(EOS, "EOS", 0)  
+       ...
+       然后T宏展开后变成
+        EOS
+        ...
+        F开头的会被忽略，因为F等于IGNORE_TOKEN
+    */
     TOKEN_LIST(T, T, IGNORE_TOKEN)
     NUM_TOKENS
   };
@@ -218,7 +228,7 @@ class Token {
     return name_[tok];
   }
 #endif
-
+  // 判断token字符语义的函数
   // Predicates
   static bool IsAssignmentOp(Value tok) {
     return INIT_VAR <= tok && tok <= ASSIGN_MOD;
@@ -247,6 +257,7 @@ class Token {
   // Returns a string corresponding to the JS token string
   // (.e., "<" for the token LT) or NULL if the token doesn't
   // have a (unique) string (e.g. an IDENTIFIER).
+  // 见token.cc关于string_的定义
   static const char* String(Value tok) {
     ASSERT(0 <= tok && tok < NUM_TOKENS);
     return string_[tok];

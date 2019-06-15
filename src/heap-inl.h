@@ -38,12 +38,12 @@ DECLARE_bool(gc_greedy);
 DECLARE_int(gc_interval);
 #endif
 
-
+// 堆对象的大小阈值，大于该值的对象分配在大对象空间
 int Heap::MaxHeapObjectSize() {
   return Page::kMaxHeapObjectSize;
 }
 
-
+// 在哪块空间分配多少内存
 Object* Heap::AllocateRaw(int size_in_bytes, AllocationSpace space) {
   ASSERT(allocation_allowed_ && gc_state_ == NOT_IN_GC);
 #ifdef DEBUG
@@ -55,11 +55,13 @@ Object* Heap::AllocateRaw(int size_in_bytes, AllocationSpace space) {
   Counters::objs_since_last_full.Increment();
   Counters::objs_since_last_young.Increment();
 #endif
+  // 在新生代中分配内存
   if (NEW_SPACE == space) {
     return new_space_->AllocateRaw(size_in_bytes);
   }
 
   Object* result;
+  // 在对应的空间分配大小
   if (OLD_SPACE == space) {
     result = old_space_->AllocateRaw(size_in_bytes);
   } else if (CODE_SPACE == space) {

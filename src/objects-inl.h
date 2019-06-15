@@ -90,12 +90,12 @@ Smi* PropertyDetails::AsSmi() {
     set_##field(BooleanBit::set(field(), offset, value));  \
   }
 
-
+// 地址的地位是否是0
 bool Object::IsSmi() {
   return HAS_SMI_TAG(this);
 }
 
-
+// 低两位是01
 bool Object::IsHeapObject() {
   return HAS_HEAP_OBJECT_TAG(this);
 }
@@ -443,31 +443,38 @@ Object* Object::GetProperty(String* key, PropertyAttributes* attributes) {
   return GetPropertyWithReceiver(this, key, attributes);
 }
 
-
+// 堆对象地址空间的某个地址，p是对象的首地址，offset是偏移，kHeapObjectTag是对象的标记，算地址的时候需要减掉
 #define FIELD_ADDR(p, offset) \
   (reinterpret_cast<byte*>(p) + offset - kHeapObjectTag)
 
+// 指向对象地址空间的某个地址，转成对象指针
 #define READ_FIELD(p, offset) \
   (*reinterpret_cast<Object**>(FIELD_ADDR(p, offset)))
 
+// 给对象地址空间的某个地址写入value
 #define WRITE_FIELD(p, offset, value) \
   (*reinterpret_cast<Object**>(FIELD_ADDR(p, offset)) = value)
 
 #define WRITE_BARRIER(object, offset) \
   Heap::RecordWrite(object->address(), offset);
 
+// 读出double类型的值
 #define READ_DOUBLE_FIELD(p, offset) \
   (*reinterpret_cast<double*>(FIELD_ADDR(p, offset)))
 
+// 写入double类型的值
 #define WRITE_DOUBLE_FIELD(p, offset, value) \
   (*reinterpret_cast<double*>(FIELD_ADDR(p, offset)) = value)
 
+// 读出int型的值
 #define READ_INT_FIELD(p, offset) \
   (*reinterpret_cast<int*>(FIELD_ADDR(p, offset)))
 
+// 写入int类型的值
 #define WRITE_INT_FIELD(p, offset, value) \
   (*reinterpret_cast<int*>(FIELD_ADDR(p, offset)) = value)
 
+// 同上
 #define READ_SHORT_FIELD(p, offset) \
   (*reinterpret_cast<uint16_t*>(FIELD_ADDR(p, offset)))
 
@@ -582,30 +589,28 @@ void HeapObject::VerifyObjectField(int offset) {
 }
 #endif
 
-
+// 堆对象的开始地址是一个Map对象
 Map* HeapObject::map() {
   return reinterpret_cast<Map*> READ_FIELD(this, kMapOffset);
 }
 
-
+// 设置堆对象的map对象
 void HeapObject::set_map(Map* value) {
   WRITE_FIELD(this, kMapOffset, value);
 }
 
-
-
-
+// 封装过的地址,kHeapObjectTag表示是一个堆对象
 HeapObject* HeapObject::FromAddress(Address address) {
   ASSERT_TAG_ALIGNED(address);
   return reinterpret_cast<HeapObject*>(address + kHeapObjectTag);
 }
 
-
+// 对象的真正地址
 Address HeapObject::address() {
   return reinterpret_cast<Address>(this) - kHeapObjectTag;
 }
 
-
+// 计算对象的大小
 int HeapObject::Size() {
   return SizeFromMap(map());
 }
@@ -634,12 +639,12 @@ void HeapObject::CopyBody(JSObject* from) {
   }
 }
 
-
+// 返回double类型的值
 double HeapNumber::value() {
   return READ_DOUBLE_FIELD(this, kValueOffset);
 }
 
-
+// 写double值到对象
 void HeapNumber::set_value(double value) {
   WRITE_DOUBLE_FIELD(this, kValueOffset, value);
 }
@@ -648,18 +653,17 @@ void HeapNumber::set_value(double value) {
 ACCESSORS(JSObject, properties, FixedArray, kPropertiesOffset)
 ACCESSORS(JSObject, elements, HeapObject, kElementsOffset)
 
-
+// 初始化对象中保存属性的域，用于存储js对象的非数字键属性,kPropertiesOffset是8，即紧跟在map指针后
 void JSObject::initialize_properties() {
   ASSERT(!Heap::InNewSpace(Heap::empty_fixed_array()));
   WRITE_FIELD(this, kPropertiesOffset, Heap::empty_fixed_array());
 }
 
-
+// 同上，用于存储js对象的数字键属性
 void JSObject::initialize_elements() {
   ASSERT(!Heap::InNewSpace(Heap::empty_fixed_array()));
   WRITE_FIELD(this, kElementsOffset, Heap::empty_fixed_array());
 }
-
 
 ACCESSORS(Oddball, to_string, String, kToStringOffset)
 ACCESSORS(Oddball, to_number, Object, kToNumberOffset)
@@ -719,7 +723,7 @@ void Struct::InitializeBody(int object_size) {
   }
 }
 
-
+// 不是字典则是快速的属性存储
 bool JSObject::HasFastProperties() {
   return !properties()->IsDictionary();
 }
@@ -756,13 +760,13 @@ bool Object::IsStringObjectWithCharacterAt(uint32_t index) {
   return true;
 }
 
-
+// 偏移为kHeaderSize处开始存储数据，每个元素大小的kPointerSize
 Object* FixedArray::get(int index) {
   ASSERT(index >= 0 && index < this->length());
   return READ_FIELD(this, kHeaderSize + index * kPointerSize);
 }
 
-
+// 写入某个元素的值，值是一个指针
 void FixedArray::set(int index, Object* value) {
   ASSERT(index >= 0 && index < this->length());
   int offset = kHeaderSize + index * kPointerSize;
@@ -791,13 +795,13 @@ void FixedArray::set(int index,
   }
 }
 
-
+// 设置某个FixedArray的元素的值
 void FixedArray::fast_set(FixedArray* array, int index, Object* value) {
   ASSERT(index >= 0 && index < array->length());
   WRITE_FIELD(array, kHeaderSize + index * kPointerSize, value);
 }
 
-
+// 设置某个元素的值是undefined
 void FixedArray::set_undefined(int index) {
   ASSERT(index >= 0 && index < this->length());
   ASSERT(!Heap::InNewSpace(Heap::undefined_value()));
@@ -812,10 +816,13 @@ void FixedArray::set_the_hole(int index) {
   WRITE_FIELD(this, kHeaderSize + index * kPointerSize, Heap::the_hole_value());
 }
 
-
+// 把FixedArray中第一和第二个元素交换
 void DescriptorArray::fast_swap(FixedArray* array, int first, int second) {
+  // 保存第一个元素的值
   Object* tmp = array->get(first);
+  // 覆盖第一个元素的值
   fast_set(array, first, array->get(second));
+  // 写入第二个元素的值
   fast_set(array, second, tmp);
 }
 
@@ -911,7 +918,7 @@ uint32_t Dictionary::max_number_key() {
 // ------------------------------------
 // Cast operations
 
-
+// 定义各个类的cast函数
 CAST_ACCESSOR(FixedArray)
 CAST_ACCESSOR(DescriptorArray)
 CAST_ACCESSOR(Dictionary)
@@ -954,10 +961,10 @@ HashTable<prefix_size, elem_size>* HashTable<prefix_size, elem_size>::cast(
   return reinterpret_cast<HashTable*>(obj);
 }
 
-
+// 定义数组的length和set_length函数，属性在对象的偏移的kLengthOffset,紧跟着map指针
 INT_ACCESSORS(Array, length, kLengthOffset)
 
-
+// symbol是独一无二的
 bool String::Equals(String* other) {
   if (other == this) return true;
   if (IsSymbol() && other->IsSymbol()) return false;
@@ -966,6 +973,7 @@ bool String::Equals(String* other) {
 
 
 int String::length() {
+  // 读长度
   uint32_t len = READ_INT_FIELD(this, kLengthOffset);
 
   switch (size_tag()) {
@@ -1000,12 +1008,12 @@ void String::set_length(int value) {
   }
 }
 
-
+// 长度
 int String::length_field() {
   return READ_INT_FIELD(this, kLengthOffset);
 }
 
-
+// 设置长度的值
 void String::set_length_field(int value) {
   WRITE_INT_FIELD(this, kLengthOffset, value);
 }
@@ -1483,7 +1491,7 @@ void Map::set_prototype(Object* value) {
   WRITE_BARRIER(this, kPrototypeOffset);
 }
 
-
+// 定义各个类的读写某属性的函数，第三第四个参数是类型和偏移
 ACCESSORS(Map, instance_descriptors, DescriptorArray,
           kInstanceDescriptorsOffset)
 ACCESSORS(Map, code_cache, FixedArray, kCodeCacheOffset)

@@ -183,7 +183,7 @@ static Object* Runtime_ClassOf(Arguments args) {
   return JSObject::cast(obj)->class_name();
 }
 
-
+// 判断一个对象是不是在另一个对象的原型链上
 static Object* Runtime_IsInPrototypeChain(Arguments args) {
   NoHandleAllocation ha;
   ASSERT(args.length() == 2);
@@ -191,6 +191,7 @@ static Object* Runtime_IsInPrototypeChain(Arguments args) {
   Object* O = args[0];
   Object* V = args[1];
   while (true) {
+    // 原型链像一个链表，不断取下一个节点判断是否等于O
     Object* prototype = V->GetPrototype();
     if (prototype->IsNull()) return Heap::false_value();
     if (O == prototype) return Heap::true_value();
@@ -1794,10 +1795,13 @@ static Object* Runtime_StringParseInt(Arguments args) {
   int i;
 
   // Skip leading white space.
+  // 跳过开头的空格
   for (i = 0; i < len && Scanner::kIsWhiteSpace.get(s->Get(i)); i++) ;
+  // 全是空格返回NAN
   if (i == len) return Heap::nan_value();
 
   // Compute the sign (default to +).
+  // 第一个有效字符是-则为负数，否则为正数，默认是正数
   int sign = 1;
   if (s->Get(i) == '-') {
     sign = -1;
@@ -1807,10 +1811,15 @@ static Object* Runtime_StringParseInt(Arguments args) {
   }
 
   // Compute the radix if 0.
+  // 如果没有传进制则探测
   if (radix == 0) {
+    // 默认是10进制
     radix = 10;
+    // i对应的字符是第一个有效字符或者正负符号后面的第一个字符
     if (i < len && s->Get(i) == '0') {
+      // 第一个有效字符是0则可能是八进制
       radix = 8;
+      // 还有后续字符并且等于x或X则是十六进制
       if (i + 1 < len) {
         int c = s->Get(i + 1);
         if (c == 'x' || c == 'X') {

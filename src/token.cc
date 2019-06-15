@@ -42,6 +42,15 @@ const char* Token::name_[NUM_TOKENS] = {
 
 #define T(name, string, precedence) string,
 const char* Token::string_[NUM_TOKENS] = {
+  /*
+    TOKEN_LIST宏展开后变成
+      T(EOS, "EOS", 0)  
+      ...
+      然后T宏展开后变成
+      "EOS"
+       ...
+       F开头的会被忽略，因为F等于IGNORE_TOKEN
+  */
   TOKEN_LIST(T, T, IGNORE_TOKEN)
 };
 #undef T
@@ -49,6 +58,15 @@ const char* Token::string_[NUM_TOKENS] = {
 
 #define T(name, string, precedence) precedence,
 int8_t Token::precedence_[NUM_TOKENS] = {
+    /*
+    TOKEN_LIST宏展开后变成
+      T(EOS, "EOS", 0)  
+      ...
+      然后T宏展开后变成
+      0
+      ...
+      F开头的会被忽略，因为F等于IGNORE_TOKEN
+    */
   TOKEN_LIST(T, T, IGNORE_TOKEN)
 };
 #undef T
@@ -62,7 +80,7 @@ const unsigned int N = 128;
 static uint8_t Hashtable[N];
 static bool IsInitialized = false;
 
-
+// 哈希算法
 static unsigned int Hash(const char* s) {
   // The following constants have been found using trial-and-error. If the
   // keyword set changes, they may have to be recomputed (make them flags
@@ -85,12 +103,15 @@ static unsigned int Hash(const char* s) {
   return h * M % N;
 }
 
-
+// 查找str字符串
 Token::Value Token::Lookup(const char* str) {
   ASSERT(IsInitialized);
+  // Hashtable[Hash(str)]得到str在string_中的索引
   Value k = static_cast<Value>(Hashtable[Hash(str)]);
+  // 得到对应的字符串
   const char* s = string_[k];
   ASSERT(s != NULL || k == IDENTIFIER);
+  // 对比
   if (s == NULL || strcmp(s, str) == 0) {
     return k;
   }
@@ -107,13 +128,22 @@ static bool IsNull(const char* s) {
 }
 #endif
 
-
+// 建立哈希表，用于Lookup查找
 void Token::Initialize() {
   if (IsInitialized) return;
 
   // A list of all keywords, terminated by ILLEGAL.
 #define T(name, string, precedence) name,
   static Value keyword[] = {
+    /*
+    TOKEN_LIST宏展开后变成
+      T(EOS, "EOS", 0)  
+      ...
+      然后T宏展开后变成
+      EOS
+      ...
+      但是只有K开头，在宏展开后会保留，因为T和F都等于IGNORE_TOKEN
+    */
     TOKEN_LIST(IGNORE_TOKEN, T, IGNORE_TOKEN)
     ILLEGAL
   };
@@ -126,16 +156,25 @@ void Token::Initialize() {
 
   // Initialize Hashtable.
   ASSERT(NUM_TOKENS <= 256);  // Hashtable contains uint8_t elements
+  // 初始化哈希表
   for (unsigned int i = 0; i < N; i++) {
     Hashtable[i] = IDENTIFIER;
   }
 
   // Insert all keywords into Hashtable.
   int collisions = 0;
+
   for (int i = 0; keyword[i] != ILLEGAL; i++) {
     Value k = keyword[i];
+    /*
+      string_的内容和Value的枚举范围是一一对应的，keyword是他们的子集，
+      即string_里包括关键字和非关键字（T和K），keyword包括了关键字的在string_中的索引,
+      string_[k]是一个字符串
+    */
     unsigned int h = Hash(string_[k]);
+    //不等于IDENTIFIER说明已经赋过值,即冲突了
     if (Hashtable[h] != IDENTIFIER) collisions++;
+    // 保存哈希值到关键字索引的映射
     Hashtable[h] = k;
   }
 
