@@ -1306,6 +1306,7 @@ class FixedArray: public Array {
   void CopyTo(int pos, FixedArray* dest, int dest_pos, int len);
 
   // Garbage collection support.
+  // FixedArray继承Array，kHeaderSize是Array属性的末地址，即子类属性的首地址+长度*元素个数（Object *）
   static int SizeFor(int length) { return kHeaderSize + length * kPointerSize; }
 
   // Casting.

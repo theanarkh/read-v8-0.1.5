@@ -186,43 +186,56 @@ class GlobalHandles::Node : public Malloced {
   TRACK_MEMORY("GlobalHandles::Node")
 };
 
-
+// 一个handle对应一个Node
 Handle<Object> GlobalHandles::Create(Object* value) {
   Counters::global_handles.Increment();
   Node* result;
+  /*
+    有一个free_list，保存着DESTROYED状态但还没有被释放的Node，
+    first_free指向第一个节点，为NULL说明没有待回收的节点，即没有可重用的节点 
+  */
   if (first_free() == NULL) {
     // Allocate a new node.
+    // 没有可重用的节点则分配一个新的
     result = new Node(value);
+    // 头插法，设置新增的node的下一个节点是当前头结点
     result->set_next(head());
+    // 头指针指向新增的node
     set_head(result);
   } else {
     // Take the first node in the free list.
+    // 获取一个可以重用的节点
     result = first_free();
+    // 获取重用节点在free_list中的第一个节点，first_free指向新的可重用节点 
     set_first_free(result->next_free());
+    // 重新初始化giant节点
     result->Initialize(value);
   }
+  // 返回一个handle对象
   return result->handle();
 }
 
-
+// 销毁一个节点
 void GlobalHandles::Destroy(Object** location) {
   Counters::global_handles.Decrement();
   if (location == NULL) return;
   Node* node = Node::FromLocation(location);
   node->Destroy();
   // Link the destroyed.
+  // 设置待销毁节点在free_list链表里的下一个节点是当前的头结点
   node->set_next_free(first_free());
+  // 头指针指向待销毁的节点，
   set_first_free(node);
 }
 
-
+// 更新node的状态
 void GlobalHandles::MakeWeak(Object** location, void* parameter,
                              WeakReferenceCallback callback) {
   ASSERT(callback != NULL);
   Node::FromLocation(location)->MakeWeak(parameter, callback);
 }
 
-
+// 恢复node的状态
 void GlobalHandles::ClearWeakness(Object** location) {
   Node::FromLocation(location)->ClearWeakness();
 }
@@ -237,7 +250,7 @@ bool GlobalHandles::IsWeak(Object** location) {
   return Node::FromLocation(location)->IsWeak();
 }
 
-
+// 遍历链表
 void GlobalHandles::IterateWeakRoots(ObjectVisitor* v) {
   // Traversal of GC roots in the global handle list that are marked as
   // WEAK or PENDING.
@@ -293,7 +306,7 @@ void GlobalHandles::IterateRoots(ObjectVisitor* v) {
     }
   }
 }
-
+// 销毁所有节点，重置头指针
 void GlobalHandles::TearDown() {
   // Delete all the nodes in the linked list.
   Node* current = head_;
@@ -311,6 +324,7 @@ void GlobalHandles::TearDown() {
 int GlobalHandles::number_of_weak_handles_ = 0;
 int GlobalHandles::number_of_global_object_weak_handles_ = 0;
 
+// 初始化这两个头指针
 GlobalHandles::Node* GlobalHandles::head_ = NULL;
 GlobalHandles::Node* GlobalHandles::first_free_ = NULL;
 

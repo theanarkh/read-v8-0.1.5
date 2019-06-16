@@ -35,7 +35,7 @@
 
 namespace v8 { namespace internal {
 
-
+// x离得最近的，接近2的n次方的值
 int32_t NextPowerOf2(uint32_t x) {
   x = x - 1;
   x = x | (x >> 1);

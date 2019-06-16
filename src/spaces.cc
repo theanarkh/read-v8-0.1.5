@@ -865,20 +865,21 @@ NewSpace::NewSpace(int initial_semispace_capacity,
 #endif
 }
 
-
+// 设置需要管理的地址空间，start是首地址，size是大小
 bool NewSpace::Setup(Address start, int size) {
   ASSERT(size == 2 * maximum_capacity_);
   ASSERT(IsAddressAligned(start, size, 0));
-
+  // to区
   if (to_space_ == NULL
       || !to_space_->Setup(start, maximum_capacity_)) {
     return false;
   }
+  // from区，和to区一人一半
   if (from_space_ == NULL
       || !from_space_->Setup(start + maximum_capacity_, maximum_capacity_)) {
     return false;
   }
-
+  // 开始地址
   start_ = start;
   /*
     address_mask的高位是地址的有效位，
@@ -889,7 +890,7 @@ bool NewSpace::Setup(Address start, int size) {
   address_mask_ = ~(size - 1);
   object_mask_ = address_mask_ | kHeapObjectTag;
   object_expected_ = reinterpret_cast<uint32_t>(start) | kHeapObjectTag;
-
+  // 初始化管理的地址的信息
   allocation_info_.top = to_space_->low();
   allocation_info_.limit = to_space_->high();
   mc_forwarding_info_.top = NULL;
@@ -1024,11 +1025,12 @@ SemiSpace::SemiSpace(int initial_capacity, int maximum_capacity)
       start_(NULL), age_mark_(NULL) {
 }
 
-
+// 设置管理的地址范围
 bool SemiSpace::Setup(Address start, int size) {
   ASSERT(size == maximum_capacity_);
+  // 判断地址的有效性
   if (!MemoryAllocator::CommitBlock(start, capacity_)) return false;
-
+  // 管理地址空间的首地址
   start_ = start;
   address_mask_ = ~(size - 1);
   object_mask_ = address_mask_ | kHeapObjectTag;

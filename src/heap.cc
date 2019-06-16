@@ -66,22 +66,22 @@ DEFINE_bool(trace_gc, false,
 DECLARE_bool(log_gc);
 #endif
 
-
+// 定义Heap类的一系列属性见ROOT_LIST
 #define ROOT_ALLOCATION(type, name) type* Heap::name##_;
   ROOT_LIST(ROOT_ALLOCATION)
 #undef ROOT_ALLOCATION
 
-
+// 同上
 #define STRUCT_ALLOCATION(NAME, Name, name) Map* Heap::name##_map_;
   STRUCT_LIST(STRUCT_ALLOCATION)
 #undef STRUCT_ALLOCATION
 
-
+// 同上
 #define SYMBOL_ALLOCATION(name, string) String* Heap::name##_;
   SYMBOL_LIST(SYMBOL_ALLOCATION)
 #undef SYMBOL_ALLOCATION
 
-
+// 各地址空间
 NewSpace* Heap::new_space_ = NULL;
 OldSpace* Heap::old_space_ = NULL;
 OldSpace* Heap::code_space_ = NULL;
@@ -118,17 +118,18 @@ int Heap::allocation_timeout_ = 0;
 bool Heap::disallow_allocation_failure_ = false;
 #endif  // DEBUG
 
-
+// 堆的地址大小
 int Heap::Capacity() {
+  // 还没有初始化，为0
   if (!HasBeenSetup()) return 0;
-
+  // 各个地址空间加起来
   return new_space_->Capacity() +
       old_space_->Capacity() +
       code_space_->Capacity() +
       map_space_->Capacity();
 }
 
-
+// 可用的空间大小
 int Heap::Available() {
   if (!HasBeenSetup()) return 0;
 
@@ -138,7 +139,7 @@ int Heap::Available() {
       map_space_->Available();
 }
 
-
+// 堆的地址空间是否已经初始化
 bool Heap::HasBeenSetup() {
   return new_space_ != NULL &&
       old_space_ != NULL &&
@@ -147,14 +148,14 @@ bool Heap::HasBeenSetup() {
       lo_space_ != NULL;
 }
 
-
+// 选择gc算法
 GarbageCollector Heap::SelectGarbageCollector(AllocationSpace space) {
   // Is global GC requested?
   if (space != NEW_SPACE || FLAG_gc_global) {
     Counters::gc_compactor_caused_by_request.Increment();
     return MARK_COMPACTOR;
   }
-
+  // 地址空间过少，需要清理
   // Is enough data promoted to justify a global GC?
   if (PromotedSpaceSize() > promoted_space_limit_) {
     Counters::gc_compactor_caused_by_promoted_data.Increment();
@@ -348,7 +349,7 @@ class GCTracer BASE_EMBEDDED {
 };
 
 
-
+// 垃圾回收
 bool Heap::CollectGarbage(int requested_size, AllocationSpace space) {
   // The VM is in the GC state until exiting this function.
   VMState state(GC);
@@ -364,7 +365,7 @@ bool Heap::CollectGarbage(int requested_size, AllocationSpace space) {
 
   { GCTracer tracer;
     GarbageCollectionPrologue();
-
+    // 选择GC算法
     GarbageCollector collector = SelectGarbageCollector(space);
     tracer.set_collector(collector);
 
@@ -372,6 +373,7 @@ bool Heap::CollectGarbage(int requested_size, AllocationSpace space) {
         ? &Counters::gc_scavenger
         : &Counters::gc_compactor;
     rate->Start();
+    // 开始垃圾回收
     PerformGarbageCollection(space, collector);
     rate->Stop();
 
@@ -449,7 +451,7 @@ void Heap::MarkCompact() {
   LOG(ResourceEvent("markcompact", "begin"));
 
   MarkCompactPrologue();
-
+  // 开始回收
   MarkCompactCollector::CollectGarbage();
 
   MarkCompactEpilogue();
@@ -548,7 +550,7 @@ void Heap::Scavenge() {
 
   // Implements Cheney's copying algorithm
   LOG(ResourceEvent("scavenge", "begin"));
-
+  // 执行scavenge算法的次数
   scavenge_count_++;
   if (new_space_->Capacity() < new_space_->MaximumCapacity() &&
       scavenge_count_ > new_space_growth_limit_) {
@@ -876,6 +878,7 @@ void Heap::CopyObject(HeapObject** p) {
 
 Object* Heap::AllocatePartialMap(InstanceType instance_type,
                                  int instance_size) {
+  // 在map空间分配一个map对象                                 
   Object* result = AllocateRawMap(Map::kSize);
   if (result->IsFailure()) return result;
 
@@ -887,7 +890,7 @@ Object* Heap::AllocatePartialMap(InstanceType instance_type,
   return result;
 }
 
-
+// 同上
 Object* Heap::AllocateMap(InstanceType instance_type, int instance_size) {
   Object* result = AllocateRawMap(Map::kSize);
   if (result->IsFailure()) return result;
@@ -1050,15 +1053,17 @@ Object* Heap::AllocateHeapNumber(double value, PretenureFlag pretenure) {
   // spaces.
   STATIC_ASSERT(HeapNumber::kSize <= Page::kMaxHeapObjectSize);
   AllocationSpace space = (pretenure == TENURED) ? CODE_SPACE : NEW_SPACE;
+  // 在空间space上分配一个HeapNumber对象大小的内存
   Object* result = AllocateRaw(HeapNumber::kSize, space);
   if (result->IsFailure()) return result;
-
+  // 转成HeapObect，设置map属性
   HeapObject::cast(result)->set_map(heap_number_map());
+  // HeapNumber继承HeapObject类，所以可以转化
   HeapNumber::cast(result)->set_value(value);
   return result;
 }
 
-
+// 在新生代空间分配
 Object* Heap::AllocateHeapNumber(double value) {
   // This version of AllocateHeapNumber is optimized for
   // allocation in new space.
@@ -1614,12 +1619,13 @@ Object* Heap::CopyCode(Code* code) {
   return new_code;
 }
 
-
+// 根据map的type分配一个对象的空间，然后设置该对象的map属性是map
 Object* Heap::Allocate(Map* map, AllocationSpace space) {
   ASSERT(gc_state_ == NOT_IN_GC);
   ASSERT(map->instance_type() != MAP_TYPE);
   Object* result = AllocateRaw(map->instance_size(), space);
   if (result->IsFailure()) return result;
+  // 转成HeapObject才有set_map函数
   HeapObject::cast(result)->set_map(map);
   return result;
 }
@@ -2056,30 +2062,36 @@ Object* Heap::AllocateEmptyFixedArray() {
   return result;
 }
 
-
+// 分配一个fixedArray
 Object* Heap::AllocateFixedArray(int length, PretenureFlag pretenure) {
   ASSERT(empty_fixed_array()->IsFixedArray());
+  // 长度是0则分配一个没有设置长度属性的数组
   if (length == 0) return empty_fixed_array();
-
+  // 计算FixedArray对象需要的地址空间，包括map（HeapObject），Array，FixedArray属性的空间
   int size = FixedArray::SizeFor(length);
   Object* result;
+  // 超过堆对象的阈值，在大对象空间分配空间
   if (size > MaxHeapObjectSize()) {
     result = lo_space_->AllocateRawFixedArray(size);
   } else {
+    // 否则在新生代或老生代空间分配
     AllocationSpace space = (pretenure == TENURED) ? OLD_SPACE : NEW_SPACE;
     result = AllocateRaw(size, space);
   }
   if (result->IsFailure()) return result;
 
   // Initialize the object.
+  // 设置map属性
   reinterpret_cast<Array*>(result)->set_map(fixed_array_map());
   FixedArray* array = FixedArray::cast(result);
+  // 设置length属性
   array->set_length(length);
+  // 初始化元素的值,是一个Object undefined_value对象
   for (int index = 0; index < length; index++) array->set_undefined(index);
   return array;
 }
 
-
+// 同上
 Object* Heap::AllocateFixedArrayWithHoles(int length) {
   if (length == 0) return empty_fixed_array();
   int size = FixedArray::SizeFor(length);
@@ -2092,20 +2104,22 @@ Object* Heap::AllocateFixedArrayWithHoles(int length) {
   reinterpret_cast<Array*>(result)->set_map(fixed_array_map());
   FixedArray* array = FixedArray::cast(result);
   array->set_length(length);
+  // 初始化值是Object, the_hole_value对象
   for (int index = 0; index < length; index++) array->set_the_hole(index);
   return array;
 }
 
-
+// HashTable本质是一个FixedArray，没有新增属性，所以分配一个FixedArray对象就行
 Object* Heap::AllocateHashTable(int length) {
   Object* result = Heap::AllocateFixedArray(length);
   if (result->IsFailure()) return result;
+  // 设置map
   reinterpret_cast<Array*>(result)->set_map(hash_table_map());
   ASSERT(result->IsDictionary());
   return result;
 }
 
-
+// 分配一个全局Context,本质是一个FixedArray
 Object* Heap::AllocateGlobalContext() {
   Object* result = Heap::AllocateFixedArray(Context::GLOBAL_CONTEXT_SLOTS);
   if (result->IsFailure()) return result;
@@ -2116,13 +2130,16 @@ Object* Heap::AllocateGlobalContext() {
   return result;
 }
 
-
+// 分配一个函数Context
 Object* Heap::AllocateFunctionContext(int length, JSFunction* function) {
   ASSERT(length >= Context::MIN_CONTEXT_SLOTS);
+  // 分配一个FixedArray
   Object* result = Heap::AllocateFixedArray(length);
   if (result->IsFailure()) return result;
   Context* context = reinterpret_cast<Context*>(result);
+  // 设置map属性
   context->set_map(context_map());
+  // 设置各属性
   context->set_closure(function);
   context->set_fcontext(context);
   context->set_previous(NULL);
@@ -2165,8 +2182,10 @@ STRUCT_LIST(MAKE_CASE)
   int size = map->instance_size();
   AllocationSpace space =
       (size > MaxHeapObjectSize()) ? LO_SPACE : OLD_SPACE;
+  // 分配一个对象，设置了map属性是map
   Object* result = Heap::Allocate(map, space);
   if (result->IsFailure()) return result;
+  // 初始化除了map对象外的地址空间
   Struct::cast(result)->InitializeBody(size);
   return result;
 }
@@ -2227,12 +2246,12 @@ void Heap::ReportHeapStatistics(const char* title) {
 }
 
 #endif  // DEBUG
-
+// 对下面函数的封装，判断地址是否在堆空间
 bool Heap::Contains(HeapObject* value) {
   return Contains(value->address());
 }
 
-
+// 判断地址是否在堆空间
 bool Heap::Contains(Address addr) {
   if (OS::IsOutsideAllocatedSpace(addr)) return false;
   return HasBeenSetup() &&
@@ -2243,12 +2262,12 @@ bool Heap::Contains(Address addr) {
      lo_space_->SlowContains(addr));
 }
 
-
+// 判断地址是否在某个空间
 bool Heap::InSpace(HeapObject* value, AllocationSpace space) {
   return InSpace(value->address(), space);
 }
 
-
+// 上面函数的实现
 bool Heap::InSpace(Address addr, AllocationSpace space) {
   if (OS::IsOutsideAllocatedSpace(addr)) return false;
   if (!HasBeenSetup()) return false;
@@ -2285,7 +2304,7 @@ void Heap::Verify() {
 }
 #endif  // DEBUG
 
-
+// 从哈希表查找string对应的值
 Object* Heap::LookupSymbol(Vector<const char> string) {
   Object* symbol = NULL;
   Object* new_table =
@@ -2296,7 +2315,7 @@ Object* Heap::LookupSymbol(Vector<const char> string) {
   return symbol;
 }
 
-
+// 同上
 Object* Heap::LookupSymbol(String* string) {
   if (string->IsSymbol()) return string;
   Object* symbol = NULL;
@@ -2449,7 +2468,9 @@ static bool heap_configured = false;
 // TODO(1236194): Since the heap size is configurable on the command line
 // and through the API, we should gracefully handle the case that the heap
 // size is not big enough to fit all the initial objects.
+// 配置堆的各空间大小，semispace_size是新生代，old_gen_size是老生代
 bool Heap::ConfigureHeap(int semispace_size, int old_gen_size) {
+  // 已经初始化过了
   if (HasBeenSetup()) return false;
 
   if (semispace_size > 0) semispace_size_ = semispace_size;
@@ -2457,11 +2478,15 @@ bool Heap::ConfigureHeap(int semispace_size, int old_gen_size) {
 
   // The new space size must be a power of two to support single-bit testing
   // for containment.
+  // 2的n次数
   semispace_size_ = NextPowerOf2(semispace_size_);
+  // initial_semispace_size_是初始值，semispace_size_ 
   initial_semispace_size_ = Min(initial_semispace_size_, semispace_size_);
+  // 新生代等于两倍的semispace_size_,from和to区
   young_generation_size_ = 2 * semispace_size_;
 
   // The old generation is paged.
+  // 对齐处理
   old_generation_size_ = RoundUp(old_generation_size_, Page::kPageSize);
 
   heap_configured = true;
@@ -2486,6 +2511,7 @@ bool Heap::Setup(bool create_heap_objects) {
   // Configuration is based on the flags new-space-size (really the semispace
   // size) and old-space-size if set or the initial values of semispace_size_
   // and old_generation_size_ otherwise.
+  // 没有配置过则先设置各空间需要的大小
   if (!heap_configured) {
     if (!ConfigureHeap(FLAG_new_space_size, FLAG_old_space_size)) return false;
   }
@@ -2493,7 +2519,9 @@ bool Heap::Setup(bool create_heap_objects) {
   // Setup memory allocator and allocate an initial chunk of memory.  The
   // initial chunk is double the size of the new space to ensure that we can
   // find a pair of semispaces that are contiguous and aligned to their size.
+  // 初始化内存分配器的属性，大小等于新生代和老生代大小。还没分配内存
   if (!MemoryAllocator::Setup(MaxCapacity())) return false;
+  // 分配一块内存
   void* chunk
       = MemoryAllocator::ReserveInitialChunk(2 * young_generation_size_);
   if (chunk == NULL) return false;
@@ -2503,15 +2531,31 @@ bool Heap::Setup(bool create_heap_objects) {
   // code space.  Align the pair of semispaces to their size, which must be
   // a power of 2.
   ASSERT(IsPowerOf2(young_generation_size_));
+  // 刚才分配的空间中，老生代在开始位置
   Address old_space_start = reinterpret_cast<Address>(chunk);
+  // 紧接着是新生代，算出大小是young_generation_size_的n倍，值大于old_space_start的最小值
   Address new_space_start = RoundUp(old_space_start, young_generation_size_);
+  // 代码空间等于新生代开始+新生代大小
   Address code_space_start = new_space_start + young_generation_size_;
+  // 老生代空间大小
   int old_space_size = new_space_start - old_space_start;
+  /*
+    因为chunk的空间两倍的young_generation_size_,新生代大小占了一半，
+    所以还有一半，剩下的一半老生代占了old_space_size，所以剩下的代码区大小
+  */
   int code_space_size = young_generation_size_ - old_space_size;
-
+  /*
+                   |young_generation_size_|   
+    chunk =>  -----------------------------------
+              ^    ^                      ^      ^
+              |    |                      |      |
+              old  new                    code   end
+  */
   // Initialize new space.
+  // 分配一个管理新生代地址空间的对象，传入初始值和最大值，因为新生代分配from和to，所以这两个初始化值是每个空间的属性
   new_space_ = new NewSpace(initial_semispace_size_, semispace_size_);
   if (new_space_ == NULL) return false;
+  // 设置新生代对象管理的地址范围,young_generation_size_ = 2 * semispace_size_ 
   if (!new_space_->Setup(new_space_start, young_generation_size_)) return false;
 
   // Initialize old space, set the maximum capacity to the old generation
@@ -2527,10 +2571,12 @@ bool Heap::Setup(bool create_heap_objects) {
   if (!code_space_->Setup(code_space_start, code_space_size)) return false;
 
   // Initialize map space.
+  // 存储map的空间
   map_space_ = new MapSpace(kMaxMapSpaceSize);
   if (map_space_ == NULL) return false;
   // Setting up a paged space without giving it a virtual memory range big
   // enough to hold at least a page will cause it to allocate.
+  // 在SetUp里分配内存，并初始化管理内存的对象
   if (!map_space_->Setup(NULL, 0)) return false;
 
   lo_space_ = new LargeObjectSpace();
