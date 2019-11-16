@@ -573,7 +573,7 @@ void MemoryAllocator::ReportStatistics() {
 
 PagedSpace::PagedSpace(int max_capacity, AllocationSpace id) {
   ASSERT(id == OLD_SPACE || id == CODE_SPACE || id == MAP_SPACE);
-  // 
+  // 先算出小于max_capacity，是页大小的倍数的最大值，再除以页大小则得到页数，再乘以对象的大小则得到总大小
   max_capacity_ = (RoundDown(max_capacity, Page::kPageSize) / Page::kPageSize)
                   * Page::kObjectAreaSize;
   identity_ = id;
@@ -595,13 +595,14 @@ bool PagedSpace::Setup(Address start, size_t size) {
   int num_pages = 0;
   // Try to use the virtual memory range passed to us.  If it is too small to
   // contain at least one page, ignore it and allocate instead.
-  // 算出有效的页数
+  // 分配虚拟内存，算出有效的大小
   if (PagesInChunk(start, size) > 0) {
-    // 映射到虚拟内存
+    // 分配虚拟内存
     first_page_ = MemoryAllocator::CommitPages(start, size, this, &num_pages);
   } else {
     int requested_pages = Min(MemoryAllocator::kPagesPerChunk,
                               max_capacity_ / Page::kObjectAreaSize);
+    // 分配虚拟内存
     first_page_ =
         MemoryAllocator::AllocatePages(requested_pages, &num_pages, this);
     if (!first_page_->is_valid()) return false;
@@ -613,7 +614,7 @@ bool PagedSpace::Setup(Address start, size_t size) {
   ASSERT(num_pages > 0);
   accounting_stats_.ExpandSpace(num_pages * Page::kObjectAreaSize);
   ASSERT(Capacity() <= max_capacity_);
-
+  // 初始化page链表
   for (Page* p = first_page_; p->is_valid(); p = p->next_page()) {
     p->ClearRSet();
   }

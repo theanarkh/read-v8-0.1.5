@@ -122,6 +122,7 @@ typedef void (*WeakReferenceCallback)(Persistent<Object> object,
  * behind the scenes and the same rules apply to these values as to
  * their handles.
  */
+// T表示handle管理的对象的类型
 template <class T> class Handle {
  public:
 
@@ -145,6 +146,7 @@ template <class T> class Handle {
    * Handle<String> to a variable declared as Handle<Value>, is legal
    * because String is a subclass of Value.
    */
+  // *that得到指向handle管理的对象的指针,转成T类型，赋值给val_
   template <class S> inline Handle(Handle<S> that)
       : val_(reinterpret_cast<T*>(*that)) {
     /**
@@ -175,11 +177,19 @@ template <class T> class Handle {
    * to which they refer are identical.
    * The handles' references are not checked.
    */
+  /*
+    比较handle指向的对象的地址是否相等
+    this是指向当前对象的指针，*this是当前对象，**this是返回val_的值，看重载运算符*的实现
+    *that是val_的值
+  */
   template <class S> bool operator==(Handle<S> that) {
     void** a = reinterpret_cast<void**>(**this);
     void** b = reinterpret_cast<void**>(*that);
+    // a等于0，则返回b是否等于0，是的话说明a==b，即true
     if (a == 0) return b == 0;
+    // a不等于0，如果b==0，则返回false
     if (b == 0) return false;
+    // 比较ab，即取val_里的内容比较
     return *a == *b;
   }
 
@@ -194,7 +204,9 @@ template <class T> class Handle {
   }
 
   template <class S> static inline Handle<T> Cast(Handle<S> that) {
+    // 返回一个空的handle，即val_是null
     if (that.IsEmpty()) return Handle<T>();
+    // *that得到指向handle管理的对象的指针，转成T类型的对象，转成底层对象是类型T的handle
     return Handle<T>(T::Cast(*that));
   }
 
@@ -213,6 +225,7 @@ template <class T> class Handle {
 template <class T> class Local : public Handle<T> {
  public:
   Local();
+  // 调用Local函数的时候S被替换成对应的类型，结果是Handle底层的val_指向一个T类型的对象
   template <class S> inline Local(Local<S> that)
       : Handle<T>(reinterpret_cast<T*>(*that)) {
     /**

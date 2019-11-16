@@ -88,7 +88,11 @@ namespace v8 { namespace internal {
   V(CompareOperation)                           \
   V(ThisFunction)
 
-
+// 把上面的NODE_LIST宏展开为
+/*
+  class Block
+  class ... 
+*/
 #define DEF_FORWARD_DECLARATION(type) class type;
 NODE_LIST(DEF_FORWARD_DECLARATION)
 #undef DEF_FORWARD_DECLARATION
@@ -98,7 +102,7 @@ NODE_LIST(DEF_FORWARD_DECLARATION)
 // Please do appreciate the required space in "> >".
 typedef ZoneList<Handle<String> > ZoneStringList;
 
-
+// Node是ast树节点的基类，ZoneObject继承于Zone，Zone用于内存分配
 class Node: public ZoneObject {
  public:
   Node(): statement_pos_(kNoPosition) { }

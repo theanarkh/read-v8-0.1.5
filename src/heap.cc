@@ -908,15 +908,17 @@ Object* Heap::AllocateMap(InstanceType instance_type, int instance_size) {
   return map;
 }
 
-
+// 初始化对里的系列map属性
 bool Heap::CreateInitialMaps() {
+  // 新建一个map对象，类型是MAP_TYPE,大小等于一个map对象的大小
   Object* obj = AllocatePartialMap(MAP_TYPE, Map::kSize);
   if (obj->IsFailure()) return false;
 
   // Map::cast cannot be used due to uninitialized map field.
+  // map等于自己
   meta_map_ = reinterpret_cast<Map*>(obj);
   meta_map()->set_map(meta_map());
-
+  // 初始化fixed_array_map_属性，kHeaderSize是数组中一个元素的地址，小于kHeaderSize的空间是存储数组属性的
   obj = AllocatePartialMap(FIXED_ARRAY_TYPE, Array::kHeaderSize);
   if (obj->IsFailure()) return false;
   fixed_array_map_ = Map::cast(obj);

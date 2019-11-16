@@ -129,22 +129,26 @@ template<class T, int shift, int size>
 class BitField {
  public:
   // Tells whether the provided value fits into the bit field.
+  // 判断低几位之外的其他位是否都等于0
   static bool is_valid(T value) {
     return (static_cast<uint32_t>(value) & ~((1U << (size)) - 1)) == 0;
   }
 
   // Returns a uint32_t mask of bit field.
+  // 从第shift+1到shift+size位为1，其他位为0
   static uint32_t mask() {
     return (1U << (size + shift)) - (1U << shift);
   }
 
   // Returns a uint32_t with the bit field value encoded.
+  // 设置某位的值
   static uint32_t encode(T value) {
     ASSERT(is_valid(value));
     return static_cast<uint32_t>(value) << shift;
   }
 
   // Extracts the bit field from the value.
+  // 取某位的值，需要屏蔽其他不相关的位的值
   static T decode(uint32_t value) {
     return static_cast<T>((value >> shift) & ((1U << (size)) - 1));
   }

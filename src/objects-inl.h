@@ -443,15 +443,15 @@ Object* Object::GetProperty(String* key, PropertyAttributes* attributes) {
   return GetPropertyWithReceiver(this, key, attributes);
 }
 
-// 堆对象地址空间的某个地址，p是对象的首地址，offset是偏移，kHeapObjectTag是对象的标记，算地址的时候需要减掉
+// 获取对象某个属性的地址，p是对象的首地址，offset是偏移，kHeapObjectTag是对象的标记，算地址的时候需要减掉
 #define FIELD_ADDR(p, offset) \
   (reinterpret_cast<byte*>(p) + offset - kHeapObjectTag)
 
-// 指向对象地址空间的某个地址，转成对象指针
+// 读取对象中某个属性的值，指向对象地址空间的某个地址，转成对象指针
 #define READ_FIELD(p, offset) \
   (*reinterpret_cast<Object**>(FIELD_ADDR(p, offset)))
 
-// 给对象地址空间的某个地址写入value
+// 给对象的某个属性赋值
 #define WRITE_FIELD(p, offset, value) \
   (*reinterpret_cast<Object**>(FIELD_ADDR(p, offset)) = value)
 
@@ -480,7 +480,7 @@ Object* Object::GetProperty(String* key, PropertyAttributes* attributes) {
 
 #define WRITE_SHORT_FIELD(p, offset, value) \
   (*reinterpret_cast<uint16_t*>(FIELD_ADDR(p, offset)) = value)
-
+// 读写一个字节的内容
 #define READ_BYTE_FIELD(p, offset) \
   (*reinterpret_cast<byte*>(FIELD_ADDR(p, offset)))
 
@@ -492,7 +492,7 @@ Object* HeapObject::GetHeapObjectField(HeapObject* obj, int index) {
   return READ_FIELD(obj, HeapObject::kSize + kPointerSize * index);
 }
 
-
+// 转成整形，低一位表示类型，需要右移去掉才能得到真正的值
 int Smi::value() {
   return reinterpret_cast<int>(this) >> kSmiTagSize;
 }
@@ -500,6 +500,7 @@ int Smi::value() {
 
 Smi* Smi::FromInt(int value) {
   ASSERT(Smi::IsValid(value));
+  // kSmiTagSize是类型标记，表示是小整形。值是1.kSmiTag是0
   return reinterpret_cast<Smi*>((value << kSmiTagSize) | kSmiTag);
 }
 
@@ -1272,6 +1273,7 @@ void ExternalTwoByteString::set_resource(
 
 byte ByteArray::get(int index) {
   ASSERT(index >= 0 && index < this->length());
+  // 根据索引返回数组中对应元素的值，kHeaderSize是第一个元素的地址，kCharSize是1，即一个字节
   return READ_BYTE_FIELD(this, kHeaderSize + index * kCharSize);
 }
 
@@ -1281,7 +1283,7 @@ void ByteArray::set(int index, byte value) {
   WRITE_BYTE_FIELD(this, kHeaderSize + index * kCharSize, value);
 }
 
-
+// 把四个元素（四个字节）的内容作为一个值。即ByteArray变成IntArray
 int ByteArray::get_int(int index) {
   ASSERT(index >= 0 && (index * kIntSize) < this->length());
   return READ_INT_FIELD(this, kHeaderSize + index * kIntSize);
@@ -1293,12 +1295,16 @@ ByteArray* ByteArray::FromDataStartAddress(Address address) {
   return reinterpret_cast<ByteArray*>(address - kHeaderSize + kHeapObjectTag);
 }
 
-
+// 返回数组元素的首地址，地址的低位是用作标记，要先减掉。kHeaderSize是第一个元素在对象内存空间的偏移
 Address ByteArray::GetDataStartAddress() {
+  /*
+    typedef uint8_t byte;
+    typedef byte* Address;
+  */
   return reinterpret_cast<Address>(this) - kHeapObjectTag + kHeaderSize;
 }
 
-
+// 
 int Map::instance_size() {
   return READ_BYTE_FIELD(this, kInstanceSizeOffset);
 }
@@ -1342,7 +1348,7 @@ void Map::set_unused_property_fields(int value) {
   WRITE_BYTE_FIELD(this, kUnusedPropertyFieldsOffset, Min(value, 255));
 }
 
-
+// 读写一个字节的内容，每个比特都记录着一个标记
 byte Map::bit_field() {
   return READ_BYTE_FIELD(this, kBitFieldOffset);
 }
@@ -1355,22 +1361,23 @@ void Map::set_bit_field(byte value) {
 
 void Map::set_non_instance_prototype(bool value) {
   if (value) {
+    // 设置该位
     set_bit_field(bit_field() | (1 << kHasNonInstancePrototype));
   } else {
+    // 清除该位
     set_bit_field(bit_field() & ~(1 << kHasNonInstancePrototype));
   }
 }
 
-
+// 是否设置了某位
 bool Map::has_non_instance_prototype() {
   return ((1 << kHasNonInstancePrototype) & bit_field()) != 0;
 }
 
-
+// 读写对象内存布局中，偏移为kFlagsOffset的值，大小为int型
 Code::Flags Code::flags() {
   return static_cast<Flags>(READ_INT_FIELD(this, kFlagsOffset));
 }
-
 
 void Code::set_flags(Code::Flags flags) {
   // Make sure that all call stubs have an arguments count.
@@ -1874,12 +1881,12 @@ bool JSObject::HasElement(uint32_t index) {
   return HasElementWithReceiver(this, index);
 }
 
-
+// 判断某个值的比特是否已设置
 bool AccessorInfo::all_can_read() {
   return BooleanBit::get(flag(), kAllCanReadBit);
 }
 
-
+// 设置某个值的某个比特
 void AccessorInfo::set_all_can_read(bool value) {
   set_flag(BooleanBit::set(flag(), kAllCanReadBit, value));
 }
@@ -1894,15 +1901,29 @@ void AccessorInfo::set_all_can_write(bool value) {
   set_flag(BooleanBit::set(flag(), kAllCanWriteBit, value));
 }
 
-
+// 获flag里取某位的值
 PropertyAttributes AccessorInfo::property_attributes() {
   return AttributesField::decode(static_cast<uint32_t>(flag()->value()));
 }
 
+/*
+  // Ecma-262 3rd 8.6.1
+  enum PropertyAttributes {
+    NONE              = v8::None,
+    READ_ONLY         = v8::ReadOnly,
+    DONT_ENUM         = v8::DontEnum,
+    DONT_DELETE       = v8::DontDelete,
+    INTERCEPTED       = 1 << 3,
+    ABSENT            = 16  // Used in runtime to indicate a property is absent.
+  };
 
+ 设置flag某位的值，见AttributesField
+ */
 void AccessorInfo::set_property_attributes(PropertyAttributes attributes) {
   ASSERT(AttributesField::is_valid(attributes));
+  // 清除相关的位
   int rest_value = flag()->value() & ~AttributesField::mask();
+  // 重新设置某位
   set_flag(Smi::FromInt(rest_value | AttributesField::encode(attributes)));
 }
 

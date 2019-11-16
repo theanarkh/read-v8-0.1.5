@@ -35,7 +35,7 @@ namespace v8 { namespace internal {
 
 // ----------------------------------------------------------------------------
 // A Zone allocator for use with LocalsMap.
-
+// 内存分配器
 class ZoneAllocator: public Allocator {
  public:
   /* nothing to do */
@@ -75,12 +75,13 @@ LocalsMap::LocalsMap(bool gotta_love_static_overloading) : HashMap()  {}
 LocalsMap::LocalsMap() : HashMap(Match, &LocalsMapAllocator, 8)  {}
 LocalsMap::~LocalsMap()  {}
 
-
+// 声明一个变量
 Variable* LocalsMap::Declare(Scope* scope,
                              Handle<String> name,
                              Variable::Mode mode,
                              bool is_valid_LHS,
                              bool is_this) {
+  // 从哈希表里查找，找到则返回，否则声明一个新的变量，见哈希表实现
   HashMap::Entry* p = HashMap::Lookup(name.location(), name->Hash(), true);
   if (p->value == NULL) {
     // The variable has not been declared yet -> insert it.
@@ -90,7 +91,7 @@ Variable* LocalsMap::Declare(Scope* scope,
   return reinterpret_cast<Variable*>(p->value);
 }
 
-
+// LocalsMap是哈希表的子类，直接使用哈希表的方法即可
 Variable* LocalsMap::Lookup(Handle<String> name) {
   HashMap::Entry* p = HashMap::Lookup(name.location(), name->Hash(), false);
   if (p != NULL) {
@@ -152,6 +153,7 @@ Scope::Scope(Scope* outer_scope, Type type)
 
 void Scope::Initialize(bool inside_with) {
   // Add this scope as a new inner scope of the outer scope.
+  // 外层的scope新增一个innerscope
   if (outer_scope_ != NULL) {
     outer_scope_->inner_scopes_.Add(this);
     scope_inside_with_ = outer_scope_->scope_inside_with_ || inside_with;

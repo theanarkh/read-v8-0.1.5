@@ -2308,7 +2308,7 @@ Object* JSObject::SlowReverseLookup(Object* value) {
   }
 }
 
-
+// clone一个map对象
 Object* Map::Copy() {
   Object* result = Heap::AllocateMap(instance_type(), instance_size());
   if (result->IsFailure()) return result;

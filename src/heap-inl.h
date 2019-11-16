@@ -76,14 +76,16 @@ Object* Heap::AllocateRaw(int size_in_bytes, AllocationSpace space) {
   return result;
 }
 
-
+// 把int32转成一个对象
 Object* Heap::NumberFromInt32(int32_t value) {
+  // 是Smi类型，则转成Smi对象
   if (Smi::IsValid(value)) return Smi::FromInt(value);
   // Bypass NumberFromDouble to avoid various redundant checks.
+  // 转成一个Number对象
   return AllocateHeapNumber(FastI2D(value));
 }
 
-
+// 同上
 Object* Heap::NumberFromUint32(uint32_t value) {
   if ((int32_t)value >= 0 && Smi::IsValid((int32_t)value)) {
     return Smi::FromInt((int32_t)value);
@@ -92,7 +94,7 @@ Object* Heap::NumberFromUint32(uint32_t value) {
   return AllocateHeapNumber(FastUI2D(value));
 }
 
-
+// 在map空间分配内存
 Object* Heap::AllocateRawMap(int size_in_bytes) {
 #ifdef DEBUG
   Counters::objs_since_last_full.Increment();
@@ -103,22 +105,22 @@ Object* Heap::AllocateRawMap(int size_in_bytes) {
   return result;
 }
 
-
+// 判断对象是不是在新生代地址空间
 bool Heap::InNewSpace(Object* object) {
   return new_space_->Contains(object);
 }
 
-
+// 判断对象是不是在新生代的from地址空间
 bool Heap::InFromSpace(Object* object) {
   return new_space_->FromSpaceContains(object);
 }
 
-
+// 判断对象是不是在新生代的to地址空间
 bool Heap::InToSpace(Object* object) {
   return new_space_->ToSpaceContains(object);
 }
 
-
+// 是否需要晋升
 bool Heap::ShouldBePromoted(Address old_address, int object_size) {
   // An object should be promoted if:
   // - the object has survived a scavenge operation or

@@ -1796,7 +1796,10 @@ class ByteArray: public Array {
 
   // Treat contents as an int array.
   inline int get_int(int index);
-
+  /*
+    ByteArray类没有定义自己的属性，他是根据length算出对象的大小，
+    然后在分配内存的时候，多分配一块存储数组元素的内存
+  */
   static int SizeFor(int length) {
     return kHeaderSize + OBJECT_SIZE_ALIGN(length);
   }
@@ -2103,6 +2106,10 @@ class Map: public HeapObject {
   }
 
   // [prototype]: implicit prototype object.
+  /*
+    Object * prototype();
+    void * set_prototype(Object * value);
+  */
   DECL_ACCESSORS(prototype, Object)
 
   // [constructor]: points back to the function responsible for this map.
@@ -2171,7 +2178,7 @@ class Map: public HeapObject {
   static const int kUnusedPropertyFieldsOffset = kInstanceAttributesOffset + 2;
   static const int kBitFieldOffset = kInstanceAttributesOffset + 3;
 
-  // Bit positions for bit field.
+  // Bit positions for bit field. kBitFieldOffset对应的一个字节，下面分别是该一个字节各比特位的标记
   static const int kHasSpecialLookup = 0;
   static const int kHasNonInstancePrototype = 1;
   static const int kIsHiddenPrototype = 2;
@@ -3238,6 +3245,7 @@ class AccessorInfo: public Struct {
   // Bit positions in flag.
   static const int kAllCanReadBit  = 0;
   static const int kAllCanWriteBit = 1;
+  // 低两位是可读写标记
   class AttributesField: public BitField<PropertyAttributes, 2, 3> {};
 };
 
@@ -3614,6 +3622,7 @@ class ObjectVisitor BASE_EMBEDDED {
 
 // BooleanBit is a helper class for setting and getting a bit in an
 // integer or Smi.
+// 比特位读写类
 class BooleanBit : public AllStatic {
  public:
   static inline bool get(Smi* smi, int bit_position) {
@@ -3630,8 +3639,10 @@ class BooleanBit : public AllStatic {
 
   static inline int set(int value, int bit_position, bool v) {
     if (v) {
+      // 设置
       value |= (1 << bit_position);
     } else {
+      // 清除
       value &= ~(1 << bit_position);
     }
     return value;
