@@ -118,6 +118,7 @@ class Page {
   // spaces and addresses in the first 8K of large object pages (ie,
   // the start of large objects but not necessarily derived pointers
   // within them).
+  // 地a按Page对齐，8kb
   INLINE(static Page* FromAddress(Address a)) {
     return reinterpret_cast<Page*>(OffsetFrom(a) & ~kPageAlignmentMask);
   }
@@ -133,6 +134,7 @@ class Page {
   }
 
   // Returns the start address of this page.
+  // 返回Page对象的首地址，类型是字节
   Address address() { return reinterpret_cast<Address>(this); }
 
   // Checks whether this is a valid page address.
@@ -209,10 +211,10 @@ class Page {
   // 8K bytes per page.
   static const int kPageSizeBits = 13;
 
-  // Page size in bytes.
+  // Page size in bytes. 页大小
   static const int kPageSize = 1 << kPageSizeBits;
 
-  // Page size mask.
+  // Page size mask. 按页对齐的掩码
   static const int kPageAlignmentMask = (1 << kPageSizeBits) - 1;
 
   // The end offset of the remembered set in a page
@@ -876,11 +878,12 @@ class SemiSpace  BASE_EMBEDDED {
   Address high() { return low() + capacity_; }
 
   // Age mark accessors.
-  Address age_mark() { return age_mark_; }
+  Address age_mark() { return ag偏移_mark_; }
   void set_age_mark(Address mark) { age_mark_ = mark; }
 
   // True if the address is in the address range of this semispace (not
   // necessarily below the allocation pointer).
+  // 判断地址a是否在该对象管理的内存中，&address_mask即让a减去size-1的大小。如果等于start说明在管理范围内
   bool Contains(Address a) {
     return (reinterpret_cast<uint32_t>(a) & address_mask_)
            == reinterpret_cast<uint32_t>(start_);
@@ -888,11 +891,13 @@ class SemiSpace  BASE_EMBEDDED {
 
   // True if the object is a heap object in the address range of this
   // semispace (not necessarily below the allocation pointer).
+  // 类似上面的逻辑，但是堆对象低位是标记，判断时候需要处理一下，加SetUp
   bool Contains(Object* o) {
     return (reinterpret_cast<uint32_t>(o) & object_mask_) == object_expected_;
   }
 
   // The offset of an address from the begining of the space.
+  // 距离开始地址的p
   int SpaceOffsetForAddress(Address addr) { return addr - low(); }
 
 #ifdef DEBUG
@@ -910,7 +915,8 @@ class SemiSpace  BASE_EMBEDDED {
   Address age_mark_;
 
   // Masks and comparison values to test for containment in this semispace.
-  uint32_t address_mask_;
+  // 见SetUp函数
+  uint32_t address_ma函数
   uint32_t object_mask_;
   uint32_t object_expected_;
 
@@ -1021,8 +1027,10 @@ class NewSpace : public Malloced {
   int MaximumCapacity() { return maximum_capacity_; }
 
   // Return the address of the allocation pointer in the active semispace.
+  // 当前已经分配出去的内存的末地址
   Address top() { return allocation_info_.top; }
   // Return the address of the first object in the active semispace.
+  // to_space的管理的内存的首地址
   Address bottom() { return to_space_->low(); }
 
   // Get the age mark of the inactive semispace.

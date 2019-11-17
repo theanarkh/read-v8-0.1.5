@@ -259,15 +259,18 @@ int LargeObjectSpace::ExtraRSetBytesFor(int object_size) {
   return extra_rset_bits / kBitsPerByte;
 }
 
-
+// 分配内存
 Object* NewSpace::AllocateRawInternal(int size_in_bytes,
                                       AllocationInfo* alloc_info) {
+  
   Address new_top = alloc_info->top + size_in_bytes;
+  // 内存不够了
   if (new_top > alloc_info->limit) {
     return Failure::RetryAfterGC(size_in_bytes, NEW_SPACE);
   }
-
+  // 地址+低一位的标记
   Object* obj = HeapObject::FromAddress(alloc_info->top);
+  // 更新指针，指向下一块可分配的内存
   alloc_info->top = new_top;
 #ifdef DEBUG
   SemiSpace* space =

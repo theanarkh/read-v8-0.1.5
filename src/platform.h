@@ -215,7 +215,7 @@ class OS {
 
 class VirtualMemory {
  public:
-  // Reserves virtual memory with size.
+  // Reserves virtual memory with size. address_hint代表用户想映射的地址
   VirtualMemory(size_t size, void* address_hint = 0);
   ~VirtualMemory();
 
@@ -238,7 +238,9 @@ class VirtualMemory {
   bool Uncommit(void* address, size_t size);
 
  private:
+  // 管理的内存首地址，由mmap返回，用户可以自定义
   void* address_;  // Start address of the virtual memory.
+  // 管理的内存大小
   size_t size_;  // Size of the virtual memory.
 };
 

@@ -55,6 +55,7 @@ static inline int ArithmeticShiftRight(int x, int s) {
 // Compute the 0-relative offset of some absolute value x of type T.
 // This allows conversion of Addresses and integral types into 0-relative
 // int offsets.
+// 判断两个指针的距离，每一步距离等于T的类型
 template <typename T>
 static inline int OffsetFrom(T x) {
   return x - static_cast<T>(0);

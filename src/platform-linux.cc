@@ -332,6 +332,7 @@ static const int kMmapFdOffset = 0;
 
 
 VirtualMemory::VirtualMemory(size_t size, void* address_hint) {
+  // 映射一块内存，不能访问，私有的，不映射到文件，写的时候如果没有物理内存则报错
   address_ = mmap(address_hint, size, PROT_NONE,
                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
                   kMmapFd, kMmapFdOffset);
@@ -340,18 +341,20 @@ VirtualMemory::VirtualMemory(size_t size, void* address_hint) {
 
 
 VirtualMemory::~VirtualMemory() {
+  // 已经分配了虚拟内存则释放
   if (IsReserved()) {
     if (0 == munmap(address(), size())) address_ = MAP_FAILED;
   }
 }
 
-
+// 是否分配了虚拟内存
 bool VirtualMemory::IsReserved() {
   return address_ != MAP_FAILED;
 }
 
-
+// 
 bool VirtualMemory::Commit(void* address, size_t size) {
+  // 修改一块虚拟内存的属性，MAP_FIXED说明分配的地址一定是address，而不能由操作系统自己选择，这里是修改属性，所以地址要固定。因为这块内存已经申请过了
   if (MAP_FAILED == mmap(address, size, PROT_READ | PROT_WRITE | PROT_EXEC,
                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
                          kMmapFd, kMmapFdOffset)) {
@@ -362,7 +365,7 @@ bool VirtualMemory::Commit(void* address, size_t size) {
   return true;
 }
 
-
+// 修改某块虚拟内存的属性，变成不可访问
 bool VirtualMemory::Uncommit(void* address, size_t size) {
   return mmap(address, size, PROT_NONE,
               MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
@@ -402,6 +405,7 @@ ThreadHandle::~ThreadHandle() {
 
 
 bool ThreadHandle::IsSelf() const {
+  // 当前执行的线程是不是管理的 线程
   return pthread_equal(data_->thread_, pthread_self());
 }
 
@@ -418,30 +422,36 @@ Thread::Thread() : ThreadHandle(ThreadHandle::INVALID) {
 Thread::~Thread() {
 }
 
-
+// arg是this指针，见Start函数
 static void* ThreadEntry(void* arg) {
   Thread* thread = reinterpret_cast<Thread*>(arg);
   // This is also initialized by the first argument to pthread_create() but we
   // don't know which thread will run first (the original thread or the new
   // one) so we initialize it here too.
+  /*
+    这里也设置一下线程id，因为如果新建完线程后，是新建的线程先执行，
+    这时候pthread_create还没有给thread_赋值,然后在执行Run的时候如果使用thread_就有问题，还是空的
+  */
   thread->thread_handle_data()->thread_ = pthread_self();
   ASSERT(thread->IsValid());
+  // 子类需要实现的函数
   thread->Run();
   return NULL;
 }
 
 
 void Thread::Start() {
+  // 创建一个线程，执行ThreadEntry函数，把线程id保存在thread_
   pthread_create(&thread_handle_data()->thread_, NULL, ThreadEntry, this);
   ASSERT(IsValid());
 }
 
-
+// 挂起，等待线程thread_结束
 void Thread::Join() {
   pthread_join(thread_handle_data()->thread_, NULL);
 }
 
-
+// 创建一个用于线程保存数据kv结构体。保存返回的key，通过key可以访问value
 Thread::LocalStorageKey Thread::CreateThreadLocalKey() {
   pthread_key_t key;
   int result = pthread_key_create(&key, NULL);
@@ -450,7 +460,7 @@ Thread::LocalStorageKey Thread::CreateThreadLocalKey() {
   return static_cast<LocalStorageKey>(key);
 }
 
-
+// 删除线程的数据
 void Thread::DeleteThreadLocalKey(LocalStorageKey key) {
   pthread_key_t pthread_key = static_cast<pthread_key_t>(key);
   int result = pthread_key_delete(pthread_key);
@@ -458,19 +468,19 @@ void Thread::DeleteThreadLocalKey(LocalStorageKey key) {
   ASSERT(result == 0);
 }
 
-
+// 通过key获取数据
 void* Thread::GetThreadLocal(LocalStorageKey key) {
   pthread_key_t pthread_key = static_cast<pthread_key_t>(key);
   return pthread_getspecific(pthread_key);
 }
 
-
+// 通过key写入数据
 void Thread::SetThreadLocal(LocalStorageKey key, void* value) {
   pthread_key_t pthread_key = static_cast<pthread_key_t>(key);
   pthread_setspecific(pthread_key, value);
 }
 
-
+// 让优先级比自己高或者等于自己的线程执行，如果没有，则自己继续执行 
 void Thread::YieldCPU() {
   sched_yield();
 }

@@ -844,7 +844,7 @@ void PagedSpace::Print() { }
 
 // -----------------------------------------------------------------------------
 // NewSpace implementation
-
+// 分为两个space
 NewSpace::NewSpace(int initial_semispace_capacity,
                    int maximum_semispace_capacity) {
   ASSERT(initial_semispace_capacity <= maximum_semispace_capacity);
@@ -889,6 +889,7 @@ bool NewSpace::Setup(Address start, int size) {
     即从左往右的1位地址有效位
   */
   address_mask_ = ~(size - 1);
+  // 参考semiSpace的分析
   object_mask_ = address_mask_ | kHeapObjectTag;
   object_expected_ = reinterpret_cast<uint32_t>(start) | kHeapObjectTag;
   // 初始化管理的地址的信息
@@ -901,7 +902,7 @@ bool NewSpace::Setup(Address start, int size) {
   return true;
 }
 
-
+// 重置属性，不负责内存的释放
 void NewSpace::TearDown() {
 #if defined(DEBUG) || defined(ENABLE_LOGGING_AND_PROFILING)
   if (allocated_histogram_) {
@@ -934,14 +935,14 @@ void NewSpace::TearDown() {
   }
 }
 
-
+// 翻转，在gc中调用
 void NewSpace::Flip() {
   SemiSpace* tmp = from_space_;
   from_space_ = to_space_;
   to_space_ = tmp;
 }
 
-
+// 扩容
 bool NewSpace::Double() {
   ASSERT(capacity_ <= maximum_capacity_ / 2);
   // TODO(1240712): Failure to double the from space can result in
@@ -949,12 +950,13 @@ bool NewSpace::Double() {
   // to space doubling should be rolled back before returning false.
   if (!to_space_->Double() || !from_space_->Double()) return false;
   capacity_ *= 2;
+  // 从新扩容的地址开始分配内存，即老内存的末端。
   allocation_info_.limit = to_space_->high();
   ASSERT_SEMISPACE_ALLOCATION_INFO(allocation_info_, to_space_);
   return true;
 }
 
-
+// 重置管理内存分配的指针
 void NewSpace::ResetAllocationInfo() {
   allocation_info_.top = to_space_->low();
   allocation_info_.limit = to_space_->high();
@@ -1033,21 +1035,24 @@ bool SemiSpace::Setup(Address start, int size) {
   if (!MemoryAllocator::CommitBlock(start, capacity_)) return false;
   // 管理地址空间的首地址
   start_ = start;
+  // 低于有效范围的掩码，即保证相与后的值小于等于管理的地址范围
   address_mask_ = ~(size - 1);
+  // 计算对象地址掩码，低位是标记位，判断的时候需要保留
   object_mask_ = address_mask_ | kHeapObjectTag;
+  // 见contains函数，对象地址里低位是标记位，判断的时候需要带上
   object_expected_ = reinterpret_cast<uint32_t>(start) | kHeapObjectTag;
-
+  // gc相关
   age_mark_ = start_;
   return true;
 }
-
+ja
 
 void SemiSpace::TearDown() {
   start_ = NULL;
   capacity_ = 0;
 }
 
-
+// 扩容
 bool SemiSpace::Double() {
   if (!MemoryAllocator::CommitBlock(high(), capacity_)) return false;
   capacity_ *= 2;
