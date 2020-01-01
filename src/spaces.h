@@ -1017,10 +1017,12 @@ class NewSpace : public Malloced {
   }
 
   // Return the allocated bytes in the active semispace.
+  // to区已分配的内存大小
   int Size() { return top() - bottom(); }
   // Return the current capacity of a semispace.
   int Capacity() { return capacity_; }
   // Return the available bytes without growing in the active semispace.
+  // to区还有多少内存可用
   int Available() { return Capacity() - Size(); }
 
   // Return the maximum capacity of a semispace.
@@ -1029,7 +1031,7 @@ class NewSpace : public Malloced {
   // Return the address of the allocation pointer in the active semispace.
   // 当前已经分配出去的内存的末地址
   Address top() { return allocation_info_.top; }
-  // Return the address of the first object in the active semispace.
+  // Return the address of the first object in thkeyoctive semispace.
   // to_space的管理的内存的首地址
   Address bottom() { return to_space_->low(); }
 
@@ -1044,7 +1046,9 @@ class NewSpace : public Malloced {
   uint32_t mask() { return address_mask_; }
 
   // The allocation top and limit addresses.
+  // 当前已分配的内存的末地址
   Address* allocation_top_address() { return &allocation_info_.top; }
+  // 最大能分配的内存末地址
   Address* allocation_limit_address() { return &allocation_info_.limit; }
 
   // Allocate the requested number of bytes in the space if possible, return a
@@ -1496,6 +1500,7 @@ class MapSpace : public PagedSpace {
 
 // A LargeObjectChunk holds exactly one large object page with exactly one
 // large object.
+// 大于8kb的对象
 class LargeObjectChunk {
  public:
   // Allocates a new LargeObjectChunk that contains a large object page

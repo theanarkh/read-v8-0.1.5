@@ -290,6 +290,7 @@ class Context: public FixedArray {
                         int* index_, PropertyAttributes* attributes);
 
   // Code generation support.
+  // 第n个元素的地址
   static int SlotOffset(int index) {
     return kHeaderSize + index * kPointerSize - kHeapObjectTag;
   }

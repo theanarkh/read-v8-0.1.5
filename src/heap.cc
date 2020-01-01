@@ -921,6 +921,7 @@ bool Heap::CreateInitialMaps() {
   // 初始化fixed_array_map_属性，kHeaderSize是数组中一个元素的地址，小于kHeaderSize的空间是存储数组属性的
   obj = AllocatePartialMap(FIXED_ARRAY_TYPE, Array::kHeaderSize);
   if (obj->IsFailure()) return false;
+  // 堆对象的前n个字节是map指针，直接cast
   fixed_array_map_ = Map::cast(obj);
 
   obj = AllocatePartialMap(ODDBALL_TYPE, Oddball::kSize);

@@ -193,6 +193,7 @@ size_t OS::AllocateAlignment() {
 
 
 void* OS::Allocate(const size_t requested, size_t* allocated) {
+  // 申请requested的大小，但是需要按页对齐，申请的大小可能比requested大
   const size_t msize = RoundUp(requested, getpagesize());
   void* mbase = mmap(NULL, msize, PROT_READ | PROT_WRITE | PROT_EXEC,
                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -200,6 +201,7 @@ void* OS::Allocate(const size_t requested, size_t* allocated) {
     LOG(StringEvent("OS::Allocate", "mmap failed"));
     return NULL;
   }
+  // 实际申请的大小
   *allocated = msize;
   UpdateAllocatedSpaceLimits(mbase, msize);
   return mbase;
@@ -491,16 +493,19 @@ class LinuxMutex : public Mutex {
 
   LinuxMutex() {
     pthread_mutexattr_t attrs;
+    // 初始化属性结构体，用于设置互斥的一些属性，或者说策略
     int result = pthread_mutexattr_init(&attrs);
     ASSERT(result == 0);
+    // 设置加锁类型，支持一个线程多次（递归）获得一个锁
     result = pthread_mutexattr_settype(&attrs, PTHREAD_MUTEX_RECURSIVE);
     ASSERT(result == 0);
+    // 初始化互斥变量
     result = pthread_mutex_init(&mutex_, &attrs);
     ASSERT(result == 0);
   }
 
   virtual ~LinuxMutex() { pthread_mutex_destroy(&mutex_); }
-
+  // 对linx线程的封装
   virtual int Lock() {
     int result = pthread_mutex_lock(&mutex_);
     return result;

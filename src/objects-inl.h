@@ -51,27 +51,30 @@ Smi* PropertyDetails::AsSmi() {
   return Smi::FromInt(value_);
 }
 
-
+// 强制类型转换的宏
 #define CAST_ACCESSOR(type)                     \
   type* type::cast(Object* object) {            \
     ASSERT(object->Is##type());                 \
     return reinterpret_cast<type*>(object);     \
   }
 
-
+// 读写对象的某个属性的值，返回类型是holder
 #define INT_ACCESSORS(holder, name, offset)                             \
   int holder::name() { return READ_INT_FIELD(this, offset); }           \
   void holder::set_##name(int value) { WRITE_INT_FIELD(this, offset, value); }
 
 
 #define ACCESSORS(holder, name, type, offset)                           \
+  // 把某地址开始的内存转成某种类型
   type* holder::name() { return type::cast(READ_FIELD(this, offset)); } \
   void holder::set_##name(type* value) {                                \
+    // 设置对象的属性的值
     WRITE_FIELD(this, offset, value);                                   \
+    // 写屏障 
     WRITE_BARRIER(this, offset);                                        \
   }
 
-
+// 读写smi类型的对象
 #define SMI_ACCESSORS(holder, name, offset)             \
   int holder::name() {                                  \
     Object* value = READ_FIELD(this, offset);           \
@@ -81,7 +84,7 @@ Smi* PropertyDetails::AsSmi() {
     WRITE_FIELD(this, offset, Smi::FromInt(value));     \
   }
 
-
+// 读写某个布尔属性的值
 #define BOOL_ACCESSORS(holder, field, name, offset) \
   bool holder::name() {                                    \
     return BooleanBit::get(field(), offset);               \
@@ -90,7 +93,7 @@ Smi* PropertyDetails::AsSmi() {
     set_##field(BooleanBit::set(field(), offset, value));  \
   }
 
-// 地址的地位是否是0
+// 地址的低位是否是0
 bool Object::IsSmi() {
   return HAS_SMI_TAG(this);
 }
@@ -710,7 +713,7 @@ void JSObject::SetInternalField(int index, Object* value) {
   WRITE_BARRIER(this, offset);
 }
 
-
+// 初始化某个范围的值
 void JSObject::InitializeBody(int object_size) {
   for (int offset = kHeaderSize; offset < object_size; offset += kPointerSize) {
     WRITE_FIELD(this, offset, Heap::undefined_value());
@@ -729,7 +732,7 @@ bool JSObject::HasFastProperties() {
   return !properties()->IsDictionary();
 }
 
-
+// 把对象转数字索引
 bool Array::IndexFromObject(Object* object, uint32_t* index) {
   if (object->IsSmi()) {
     int value = Smi::cast(object)->value();
@@ -748,7 +751,7 @@ bool Array::IndexFromObject(Object* object, uint32_t* index) {
   return false;
 }
 
-
+// 判断index是不是字符串的有效长度
 bool Object::IsStringObjectWithCharacterAt(uint32_t index) {
   if (!this->IsJSValue()) return false;
 

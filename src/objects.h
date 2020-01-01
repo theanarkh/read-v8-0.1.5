@@ -114,7 +114,7 @@ class PropertyDetails BASE_EMBEDDED {
     ASSERT(TypeField::is_valid(type));
     ASSERT(AttributesField::is_valid(attributes));
     ASSERT(IndexField::is_valid(index));
-
+    // 三个字段的值一起存在int32位里
     value_ = TypeField::encode(type)
         | AttributesField::encode(attributes)
         | IndexField::encode(index);
@@ -127,18 +127,18 @@ class PropertyDetails BASE_EMBEDDED {
   // Conversion for storing details as Object*.
   inline PropertyDetails(Smi* smi);
   inline Smi* AsSmi();
-
+  // 取出Propertype字段的值
   PropertyType type() { return TypeField::decode(value_); }
 
-  bool IsTransition() {
+  bool IsTransition() 
     PropertyType t = type();
     ASSERT(t != INTERCEPTOR);
     if (t == MAP_TRANSITION || t == CONSTANT_TRANSITION) return true;
     return false;
-  }
 
+  // 取出PropertyAttributes字段的值
   PropertyAttributes attributes() { return AttributesField::decode(value_); }
-
+  // 取出index字段的值
   int index() { return IndexField::decode(value_); }
 
   static bool IsValidIndex(int index) { return IndexField::is_valid(index); }
@@ -149,8 +149,11 @@ class PropertyDetails BASE_EMBEDDED {
 
   // Bit fields in value_ (type, shift, size). Must be public so the
   // constants can be embedded in generated code.
+  // 低三位
   class TypeField:       public BitField<PropertyType,       0, 3> {};
+  // 3-6位
   class AttributesField: public BitField<PropertyAttributes, 3, 3> {};
+  // 6-(32-6)位
   class IndexField:      public BitField<uint32_t,           6, 32-6> {};
 
   static const int kInitialIndex = 1;
@@ -379,6 +382,7 @@ class PropertyDetails BASE_EMBEDDED {
 // We use the full 8 bits of the instance_type field to encode heap object
 // instance types.  The high-order bit (bit 7) is set if the object is not a
 // string, and cleared if it is a string.
+// 
 const uint32_t kIsNotStringMask = 0x80;
 const uint32_t kStringTag = 0x0;
 const uint32_t kNotStringTag = 0x80;
@@ -939,7 +943,7 @@ class HeapNumber: public HeapObject {
 class JSObject: public HeapObject {
  public:
   // [properties]: Backing storage for properties.
-  // 宏展开是是定义个properties和set_properties函数，类型是FixedArray
+  // 宏展开是properties和set_properties函数，类型是FixedArray
   DECL_ACCESSORS(properties, FixedArray)
   inline void initialize_properties();
 
@@ -3208,6 +3212,7 @@ class JSArray: public JSObject {
 // have READ_ONLY property attribute so that a new value
 // is added to the local object to shadow the accessor
 // in prototypes.
+// 对象的属性描述符
 class AccessorInfo: public Struct {
  public:
   DECL_ACCESSORS(getter, Object)
@@ -3301,7 +3306,7 @@ class InterceptorInfo: public Struct {
   DISALLOW_IMPLICIT_CONSTRUCTORS(InterceptorInfo);
 };
 
-
+// 用于函数模块中保存函数模板的值和data
 class CallHandlerInfo: public Struct {
  public:
   DECL_ACCESSORS(callback, Object)
