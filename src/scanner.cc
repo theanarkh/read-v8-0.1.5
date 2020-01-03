@@ -68,20 +68,29 @@ void UTF8Buffer::Initialize(char* src, int length) {
 
 void UTF8Buffer::AddChar(uc32 c) {
   const int min_size = 1024;
+  // 空间不够，扩容
   if (pos_ + static_cast<int>(unibrow::Utf8::kMaxEncodedSize) > size_) {
+    // 扩容两倍大小
     int new_size = size_ * 2;
+    // 至少是min_size字节
     if (new_size < min_size) {
       new_size = min_size;
     }
+    // 新申请一块内存
     char* new_data = NewArray<char>(new_size);
+    // 把旧的数据复制过去
     memcpy(new_data, data_, pos_);
+    // 删除原来的内存
     DeleteArray(data_);
+    // 更新字段
     data_ = new_data;
     size_ = new_size;
   }
+  // 转成int型，小于127则属于ascii码范围，即一个字节，则直接赋值
   if (static_cast<unsigned>(c) < unibrow::Utf8::kMaxOneByteChar) {
     data_[pos_++] = c;  // common case: 7bit ASCII
   } else {
+    // 多字节的情况
     pos_ += unibrow::Utf8::Encode(&data_[pos_], c);
   }
   ASSERT(pos_ <= size_);

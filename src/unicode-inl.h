@@ -77,13 +77,16 @@ template <class T, int s> int Mapping<T, s>::CalculateValue(uchar c, uchar n,
   }
 }
 
-
+// 把一个字符按照utf-8编码储存
 unsigned Utf8::Encode(char* str, uchar c) {
   static const int kMask = ~(1 << 6);
+  // 一个字节
   if (c <= kMaxOneByteChar) {
     str[0] = c;
     return 1;
+  // 需要两个字节存储
   } else if (c <= kMaxTwoByteChar) {
+    // 把c拆成两个部分存在两个字节里
     str[0] = 0xC0 | (c >> 6);
     str[1] = 0x80 | (c & kMask);
     return 2;

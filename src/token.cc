@@ -35,6 +35,10 @@ namespace v8 { namespace internal {
 #define T(name, string, precedence) #name,
 const char* Token::name_[NUM_TOKENS] = {
   TOKEN_LIST(T, T, IGNORE_TOKEN)
+  /*
+    EOS, LPAREN, RPAREN, LBRACK, RBRACK, LBRACE, RBRACE, COLON, SEMICOLON, PERIOD, CONDITIONAL, INC, DEC, INIT_VAR, INIT_CONST, ASSIGN, ASSIGN_BIT_OR, ASSIGN_BIT_XOR, ASSIGN_BIT_AND, ASSIGN_SHL, ASSIGN_SAR, ASSIGN_SHR, ASSIGN_ADD, ASSIGN_SUB, ASSIGN_MUL, ASSIGN_DIV, ASSIGN_MOD, COMMA, OR, AND, BIT_OR, BIT_XOR, BIT_AND, SHL, SAR, SHR, ADD, SUB, MUL, DIV, MOD, EQ, NE, EQ_STRICT, NE_STRICT, LT, GT, LTE, GTE, INSTANCEOF, IN, NOT, BIT_NOT, DELETE, TYPEOF, VOID, BREAK, CASE, CATCH, CONTINUE, DEBUGGER, DEFAULT, DO, ELSE, FINALLY, FOR, FUNCTION, IF, NEW, RETURN, SWITCH, THIS, THROW, TRY, VAR, WHILE, WITH, CONST, NATIVE, NULL_LITERAL, TRUE_LITERAL, FALSE_LITERAL, NUMBER, STRING, IDENTIFIER, ILLEGAL, COMMENT,
+    NUM_TOKENS
+  */
 };
 #undef T
 #endif
@@ -52,6 +56,9 @@ const char* Token::string_[NUM_TOKENS] = {
        F开头的会被忽略，因为F等于IGNORE_TOKEN
   */
   TOKEN_LIST(T, T, IGNORE_TOKEN)
+  /*
+    "EOS", "(", ")", "[", "]", "{", "}", ":", ";", ".", "?", "++", "--", "=init_var", "=init_const", "=", "|=", "^=", "&=", "<<=", ">>=", ">>>=", "+=", "-=", "*=", "/=", "%=", ",", "||", "&&", "|", "^", "&", "<<", ">>", ">>>", "+", "-", "*", "/", "%", "==", "!=", "===", "!==", "<", ">", "<=", ">=", "instanceof", "in", "!", "~", "delete", "typeof", "void", "break", "case", "catch", "continue", "debugger", "default", "do", "else", "finally", "for", "function", "if", "new", "return", "switch", "this", "throw", "try", "var", "while", "with", "const", "native", "null", "true", "false", NULL, NULL, NULL, "ILLEGAL", NULL,
+  */
 };
 #undef T
 
@@ -68,6 +75,9 @@ int8_t Token::precedence_[NUM_TOKENS] = {
       F开头的会被忽略，因为F等于IGNORE_TOKEN
     */
   TOKEN_LIST(T, T, IGNORE_TOKEN)
+  /*
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 4, 5, 6, 7, 8, 11, 11, 11, 12, 12, 13, 13, 13, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  */
 };
 #undef T
 
@@ -146,6 +156,11 @@ void Token::Initialize() {
     */
     TOKEN_LIST(IGNORE_TOKEN, T, IGNORE_TOKEN)
     ILLEGAL
+    /*
+      INSTANCEOF, IN, DELETE, TYPEOF, VOID, BREAK, CASE, CATCH, CONTINUE, DEBUGGER, DEFAULT, DO, ELSE, FINALLY, FOR, FUNCTION, IF, NEW, RETURN, SWITCH, THIS, THROW, TRY, VAR, WHILE, WITH, CONST, NATIVE, NULL_LITERAL, TRUE_LITERAL, FALSE_LITERAL,
+      ILLEGAL
+  
+    */
   };
 #undef T
 
@@ -193,7 +208,10 @@ void Token::Initialize() {
   ASSERT(Lookup(string) == name);
 
   TOKEN_LIST(T, K, IGNORE_TOKEN)
-
+/*
+  宏展开后
+  ASSERT(IsNull("EOS") || Lookup("EOS") == IDENTIFIER); ASSERT(IsNull("(") || Lookup("(") == IDENTIFIER); ASSERT(IsNull(")") || Lookup(")") == IDENTIFIER); ASSERT(IsNull("[") || Lookup("[") == IDENTIFIER); ASSERT(IsNull("]") || Lookup("]") == IDENTIFIER); ASSERT(IsNull("{") || Lookup("{") == IDENTIFIER); ASSERT(IsNull("}") || Lookup("}") == IDENTIFIER); ASSERT(IsNull(":") || Lookup(":") == IDENTIFIER); ASSERT(IsNull(";") || Lookup(";") == IDENTIFIER); ASSERT(IsNull(".") || Lookup(".") == IDENTIFIER); ASSERT(IsNull("?") || Lookup("?") == IDENTIFIER); ASSERT(IsNull("++") || Lookup("++") == IDENTIFIER); ASSERT(IsNull("--") || Lookup("--") == IDENTIFIER); ASSERT(IsNull("=init_var") || Lookup("=init_var") == IDENTIFIER); ASSERT(IsNull("=init_const") || Lookup("=init_const") == IDENTIFIER); ASSERT(IsNull("=") || Lookup("=") == IDENTIFIER); ASSERT(IsNull("|=") || Lookup("|=") == IDENTIFIER); ASSERT(IsNull("^=") || Lookup("^=") == IDENTIFIER); ASSERT(IsNull("&=") || Lookup("&=") == IDENTIFIER); ASSERT(IsNull("<<=") || Lookup("<<=") == IDENTIFIER); ASSERT(IsNull(">>=") || Lookup(">>=") == IDENTIFIER); ASSERT(IsNull(">>>=") || Lookup(">>>=") == IDENTIFIER); ASSERT(IsNull("+=") || Lookup("+=") == IDENTIFIER); ASSERT(IsNull("-=") || Lookup("-=") == IDENTIFIER); ASSERT(IsNull("*=") || Lookup("*=") == IDENTIFIER); ASSERT(IsNull("/=") || Lookup("/=") == IDENTIFIER); ASSERT(IsNull("%=") || Lookup("%=") == IDENTIFIER); ASSERT(IsNull(",") || Lookup(",") == IDENTIFIER); ASSERT(IsNull("||") || Lookup("||") == IDENTIFIER); ASSERT(IsNull("&&") || Lookup("&&") == IDENTIFIER); ASSERT(IsNull("|") || Lookup("|") == IDENTIFIER); ASSERT(IsNull("^") || Lookup("^") == IDENTIFIER); ASSERT(IsNull("&") || Lookup("&") == IDENTIFIER); ASSERT(IsNull("<<") || Lookup("<<") == IDENTIFIER); ASSERT(IsNull(">>") || Lookup(">>") == IDENTIFIER); ASSERT(IsNull(">>>") || Lookup(">>>") == IDENTIFIER); ASSERT(IsNull("+") || Lookup("+") == IDENTIFIER); ASSERT(IsNull("-") || Lookup("-") == IDENTIFIER); ASSERT(IsNull("*") || Lookup("*") == IDENTIFIER); ASSERT(IsNull("/") || Lookup("/") == IDENTIFIER); ASSERT(IsNull("%") || Lookup("%") == IDENTIFIER); ASSERT(IsNull("==") || Lookup("==") == IDENTIFIER); ASSERT(IsNull("!=") || Lookup("!=") == IDENTIFIER); ASSERT(IsNull("===") || Lookup("===") == IDENTIFIER); ASSERT(IsNull("!==") || Lookup("!==") == IDENTIFIER); ASSERT(IsNull("<") || Lookup("<") == IDENTIFIER); ASSERT(IsNull(">") || Lookup(">") == IDENTIFIER); ASSERT(IsNull("<=") || Lookup("<=") == IDENTIFIER); ASSERT(IsNull(">=") || Lookup(">=") == IDENTIFIER); ASSERT(Lookup("instanceof") == INSTANCEOF); ASSERT(Lookup("in") == IN); ASSERT(IsNull("!") || Lookup("!") == IDENTIFIER); ASSERT(IsNull("~") || Lookup("~") == IDENTIFIER); ASSERT(Lookup("delete") == DELETE); ASSERT(Lookup("typeof") == TYPEOF); ASSERT(Lookup("void") == VOID); ASSERT(Lookup("break") == BREAK); ASSERT(Lookup("case") == CASE); ASSERT(Lookup("catch") == CATCH); ASSERT(Lookup("continue") == CONTINUE); ASSERT(Lookup("debugger") == DEBUGGER); ASSERT(Lookup("default") == DEFAULT); ASSERT(Lookup("do") == DO); ASSERT(Lookup("else") == ELSE); ASSERT(Lookup("finally") == FINALLY); ASSERT(Lookup("for") == FOR); ASSERT(Lookup("function") == FUNCTION); ASSERT(Lookup("if") == IF); ASSERT(Lookup("new") == NEW); ASSERT(Lookup("return") == RETURN); ASSERT(Lookup("switch") == SWITCH); ASSERT(Lookup("this") == THIS); ASSERT(Lookup("throw") == THROW); ASSERT(Lookup("try") == TRY); ASSERT(Lookup("var") == VAR); ASSERT(Lookup("while") == WHILE); ASSERT(Lookup("with") == WITH); ASSERT(Lookup("const") == CONST); ASSERT(Lookup("native") == NATIVE); ASSERT(Lookup("null") == NULL_LITERAL); ASSERT(Lookup("true") == TRUE_LITERAL); ASSERT(Lookup("false") == FALSE_LITERAL); ASSERT(IsNull(NULL) || Lookup(NULL) == IDENTIFIER); ASSERT(IsNull(NULL) || Lookup(NULL) == IDENTIFIER); ASSERT(IsNull(NULL) || Lookup(NULL) == IDENTIFIER); ASSERT(IsNull("ILLEGAL") || Lookup("ILLEGAL") == IDENTIFIER); ASSERT(IsNull(NULL) || Lookup(NULL) == IDENTIFIER);
+*/
 #undef K
 #undef T
 }
