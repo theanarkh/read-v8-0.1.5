@@ -4929,7 +4929,7 @@ static Object* Runtime_IS_VAR(Arguments args) {
 #define F(name, nargs)                                                 \
   { #name, "RuntimeStub_" #name, FUNCTION_ADDR(Runtime_##name), nargs, \
     static_cast<int>(Runtime::k##name) },
-
+// 运行时函数的信息
 static Runtime::Function Runtime_functions[] = {
   RUNTIME_FUNCTION_LIST(F)
   { NULL, NULL, NULL, 0, -1 }
@@ -4937,13 +4937,13 @@ static Runtime::Function Runtime_functions[] = {
 
 #undef F
 
-
+// Runtime_functions的索引和枚举类型FunctionId的枚举值一致 
 Runtime::Function* Runtime::FunctionForId(FunctionId fid) {
   ASSERT(0 <= fid && fid < kNofFunctions);
   return &Runtime_functions[fid];
 }
 
-
+// 根据name查找对应的函数信息
 Runtime::Function* Runtime::FunctionForName(const char* name) {
   for (Function* f = Runtime_functions; f->name != NULL; f++) {
     if (strcmp(f->name, name) == 0) {

@@ -1499,17 +1499,20 @@ template<int prefix_size, int element_size>
 class HashTable: public FixedArray {
  public:
   // Returns the number of elements in the dictionary.
+  // 已使用的元素个数
   int NumberOfElements() {
     return Smi::cast(get(kNumberOfElementsIndex))->value();
   }
 
   // Returns the capacity of the dictionary.
+  // 容量
   int Capacity() {
     return Smi::cast(get(kCapacityIndex))->value();
   }
 
   // ElementAdded should be called whenever an element is added to a
   // dictionary.
+  // 操作元素个数
   void ElementAdded() { SetNumberOfElements(NumberOfElements() + 1); }
 
   // ElementRemoved should be called whenever an element is removed from
@@ -1521,10 +1524,12 @@ class HashTable: public FixedArray {
   static Object* Allocate(int at_least_space_for);
 
   // Returns the key at entry.
+  // 根据索引获取哈希表中对应的值
   Object* KeyAt(int entry) { return get(EntryToIndex(entry)); }
 
   // Tells wheter k is a real key.  Null and undefined are not allowed
   // as keys and can be used to indicate missing or deleted elements.
+  // 是否是有效的键
   bool IsKey(Object* k) {
     return !k->IsNull() && !k->IsUndefined();
   }
@@ -1555,15 +1560,21 @@ class HashTable: public FixedArray {
   };
 
   // Compute the probe offset (quadratic probing).
+  // 计算哈希冲突时，跳的步长
   INLINE(static uint32_t GetProbeOffset(uint32_t n)) {
     return (n + n * n) >> 1;
   }
-
+  // 元素个数 索引
   static const int kNumberOfElementsIndex = 0;
+  // 容量 索引
   static const int kCapacityIndex         = 1;
+  // prefix 索引
   static const int kPrefixStartIndex      = 2;
+  // 哈希表第一个元素的开始地址的索引
   static const int kElementsStartIndex    = kPrefixStartIndex + prefix_size;
+  // 元素大小
   static const int kElementSize           = element_size;
+  // 第一个元素的相对内存偏移地址
   static const int kElementsStartOffset   =
       kHeaderSize + kElementsStartIndex * kPointerSize;
 
@@ -1576,16 +1587,19 @@ class HashTable: public FixedArray {
   uint32_t FindInsertionEntry(Object* key, uint32_t hash);
 
   // Returns the index for an entry (of the key)
+  // 根据元素的索引算出在哈希表中的相对内存偏移
   static inline int EntryToIndex(int entry) {
     return (entry * kElementSize) + kElementsStartIndex;
   }
 
   // Update the number of elements in the dictionary.
+  // 哈希表元素个数
   void SetNumberOfElements(int nof) {
     fast_set(this, kNumberOfElementsIndex, Smi::FromInt(nof));
   }
 
   // Sets the capacity of the hash table.
+  // 哈希表容量
   void SetCapacity(int capacity) {
     // To scale a computed hash code to fit within the hash table, we
     // use bit-wise AND with a mask, so the capacity must be positive
@@ -1596,6 +1610,7 @@ class HashTable: public FixedArray {
 
 
   // Returns probe entry.
+  // 哈希冲突时，下一个索引的位置
   static uint32_t GetProbe(uint32_t hash, uint32_t number, uint32_t size) {
     ASSERT(IsPowerOf2(size));
     return (hash + GetProbeOffset(number)) & (size - 1);

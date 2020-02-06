@@ -5198,9 +5198,12 @@ void HashTable<prefix_size, element_size>::IterateElements(ObjectVisitor* v) {
 template<int prefix_size, int element_size>
 Object* HashTable<prefix_size, element_size>::Allocate(int at_least_space_for) {
   int capacity = NextPowerOf2(at_least_space_for);
+  // 见内存布局
   if (capacity < 4) capacity = 4;  // Guarantee min capacity.
+  // 算出最后一个元素在哈希表中的相对偏移，即哈希表大小
   Object* obj = Heap::AllocateHashTable(EntryToIndex(capacity));
   if (!obj->IsFailure()) {
+    // 初始化属性
     HashTable::cast(obj)->SetNumberOfElements(0);
     HashTable::cast(obj)->SetCapacity(capacity);
   }
@@ -5211,24 +5214,34 @@ Object* HashTable<prefix_size, element_size>::Allocate(int at_least_space_for) {
 // Find entry for key otherwise return -1.
 template <int prefix_size, int element_size>
 int HashTable<prefix_size, element_size>::FindEntry(Key* key) {
+  // 已使用的元素个数
   uint32_t nof = NumberOfElements();
   if (nof == 0) return -1;  // Bail out if empty.
 
   uint32_t capacity = Capacity();
   uint32_t hash = key->Hash();
+  // 获取在哈希表中的逻辑索引，还需要转成内部真正的索引，因为哈希表的数组前几项用来存储其他数据了
   uint32_t entry = GetProbe(hash, 0, capacity);
-
+  // 获取对应的键
   Object* element = KeyAt(entry);
   uint32_t passed_elements = 0;
+  // 有效并match则返回
   if (!element->IsNull()) {
     if (!element->IsUndefined() && key->IsMatch(element)) return entry;
+    // 只有一个元素并且还不相等，不用找了，直接返回找不到
     if (++passed_elements == nof) return -1;
   }
+  /*
+    哈希表解决冲突方式是开发地址法，所以继续找下一个位置的元素，
+    直到undefined，说明到底了，极端的情况下，遍历的每个元素都有值了，
+    但都不等于想要找的值，所以下面passed_elements那里也需要判断，否则死循环
+  */
   for (uint32_t i = 1; !element->IsUndefined(); i++) {
     entry = GetProbe(hash, i, capacity);
     element = KeyAt(entry);
     if (!element->IsNull()) {
       if (!element->IsUndefined() && key->IsMatch(element)) return entry;
+      // todo
       if (++passed_elements == nof) return -1;
     }
   }
@@ -5239,8 +5252,10 @@ int HashTable<prefix_size, element_size>::FindEntry(Key* key) {
 template<int prefix_size, int element_size>
 Object* HashTable<prefix_size, element_size>::EnsureCapacity(int n, Key* key) {
   int capacity = Capacity();
+  // 已使用加上待添加的个数
   int nof = NumberOfElements() + n;
   // Make sure 20% is free
+  // n+n/4如果小于容量则说明剩余空间小于20%了。假设是等于，说明n/4==capacity/5
   if (nof + (nof >> 2) <= capacity) return this;
 
   Object* obj = Allocate(nof * 2);
@@ -5269,7 +5284,7 @@ Object* HashTable<prefix_size, element_size>::EnsureCapacity(int n, Key* key) {
   return dict;
 }
 
-
+// 找到key对应的索引
 template<int prefix_size, int element_size>
 uint32_t HashTable<prefix_size, element_size>::FindInsertionEntry(
       Object* key,
@@ -5277,7 +5292,7 @@ uint32_t HashTable<prefix_size, element_size>::FindInsertionEntry(
   uint32_t capacity = Capacity();
   uint32_t entry = GetProbe(hash, 0, capacity);
   Object* element = KeyAt(entry);
-
+  // 冲突了，找下一个可用的索引
   for (uint32_t i = 1; !(element->IsUndefined() || element->IsNull()); i++) {
     entry = GetProbe(hash, i, capacity);
     element = KeyAt(entry);
@@ -5306,7 +5321,7 @@ Object* SymbolTable::LookupSymbol(Vector<const char> str, Object** s) {
   return LookupKey(&key, s);
 }
 
-
+// 从哈希表中查找一个key的值
 Object* SymbolTable::LookupKey(Key* key, Object** s) {
   int entry = FindEntry(key);
 
