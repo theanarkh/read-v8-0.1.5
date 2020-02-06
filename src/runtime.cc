@@ -1250,6 +1250,7 @@ Object* Runtime::SetObjectProperty(Handle<Object> object,
 
   // Check if the given key is an array index.
   uint32_t index;
+  // 把对象转数字索引,如果不能转换则返回false
   if (Array::IndexFromObject(*key, &index)) {
     ASSERT(attr == NONE);
 
@@ -1262,12 +1263,12 @@ Object* Runtime::SetObjectProperty(Handle<Object> object,
     // assignments.
     if (object->IsStringObjectWithCharacterAt(index))
       return *value;
-
+    // 键对值保存在element数组里
     Object* result = JSObject::cast(*object)->SetElement(index, *value);
     if (result->IsFailure()) return result;
     return *value;
   }
-
+  // 键是字符串
   if (key->IsString()) {
     Object* result;
     if (String::cast(*key)->AsArrayIndex(&index)) {

@@ -2529,21 +2529,25 @@ Object* DescriptorArray::Allocate(int number_of_descriptors) {
 void DescriptorArray::SetEnumCache(FixedArray* bridge_storage,
                                    FixedArray* new_cache) {
   ASSERT(bridge_storage->length() >= kEnumCacheBridgeLength);
+  // 有cache，先从DescriptorArray数组的第二个元素中获取，cache数组的地址，再设置cache数组里第二个元素的值
   if (HasEnumCache()) {
     FixedArray::cast(get(kEnumerationIndexIndex))->
       set(kEnumCacheBridgeCacheIndex, new_cache);
   } else {
     if (length() == 0) return;  // Do nothing for empty descriptor array.
+    // 还没cache，先设置cache数组第二个元素的组为new_cache
     FixedArray::cast(bridge_storage)->
       set(kEnumCacheBridgeCacheIndex, new_cache);
+    // 再设置cache数组第一个元素的值是DescriptorArray数组第二个元素的值
     fast_set(FixedArray::cast(bridge_storage),
              kEnumCacheBridgeEnumIndex,
              get(kEnumerationIndexIndex));
+    // 再设置DescriptorArray数组的第二个元素指向cache数组
     set(kEnumerationIndexIndex, bridge_storage);
   }
 }
 
-
+// 修改DescriptorArray数组的某个描述符信息的value，即设置ContentArray数组的内容
 void DescriptorArray::ReplaceConstantFunction(int descriptor_number,
                                               JSFunction* value) {
   ASSERT(!Heap::InNewSpace(value));

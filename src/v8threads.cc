@@ -167,13 +167,13 @@ void ThreadState::AllocateSpace() {
   data_ = NewArray<char>(ArchiveSpacePerThread());
 }
 
-
+// 把自己从链表中删除
 void ThreadState::Unlink() {
   next_->previous_ = previous_;
   previous_->next_ = next_;
 }
 
-
+// 头插法插入,flying_anchor相当于头指针
 void ThreadState::LinkInto(List list) {
   ThreadState* flying_anchor =
       list == FREE_LIST ? free_anchor_ : in_use_anchor_;
@@ -183,10 +183,12 @@ void ThreadState::LinkInto(List list) {
   next_->previous_ = this;
 }
 
-
+// 获取一个空闲节点
 ThreadState* ThreadState::GetFree() {
   ThreadState* gotten = free_anchor_->next_;
+  // 等于自己说明没有空闲节点了
   if (gotten == free_anchor_) {
+    // 分配一个新的节点
     ThreadState* new_thread_state = new ThreadState();
     new_thread_state->AllocateSpace();
     return new_thread_state;
@@ -200,13 +202,14 @@ ThreadState* ThreadState::FirstInUse() {
   return in_use_anchor_->Next();
 }
 
-
+// 下一个
 ThreadState* ThreadState::Next() {
+  // 等于自己（头指针）说明没有下一个节点，这是初始化状态
   if (next_ == in_use_anchor_) return NULL;
   return next_;
 }
 
-
+// 互斥变量，对操作系统的封装
 Mutex* ThreadManager::mutex_ = OS::CreateMutex();
 ThreadHandle ThreadManager::mutex_owner_(ThreadHandle::INVALID);
 ThreadHandle ThreadManager::lazily_archived_thread_(ThreadHandle::INVALID);

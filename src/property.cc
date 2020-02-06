@@ -29,7 +29,7 @@
 
 namespace v8 { namespace internal {
 
-
+// 修改某个索引的值
 void DescriptorWriter::Write(Descriptor* desc) {
   ASSERT(desc->key_->IsSymbol());
   descriptors_->Set(pos_, desc);

@@ -739,6 +739,7 @@ class Heap : public AllStatic {
   static int old_gen_exhausted_;
 
   // Declare all the roots
+// 定义所有的Map属性
 #define ROOT_DECLARATION(type, name) static type* name##_;
   ROOT_LIST(ROOT_DECLARATION)
 #undef ROOT_DECLARATION

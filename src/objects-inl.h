@@ -94,7 +94,7 @@ Smi* PropertyDetails::AsSmi() {
   }
 
 // 地址的低位是否是0
-bool Object::IsSmi() {
+bool Object::IObject::isSmi() {
   return HAS_SMI_TAG(this);
 }
 
@@ -103,7 +103,7 @@ bool Object::IsHeapObject() {
   return HAS_HEAP_OBJECT_TAG(this);
 }
 
-
+// 类型判断，在map里标记
 bool Object::IsHeapNumber() {
   return Object::IsHeapObject()
     && HeapObject::cast(this)->map()->instance_type() == HEAP_NUMBER_TYPE;
@@ -653,7 +653,7 @@ void HeapNumber::set_value(double value) {
   WRITE_DOUBLE_FIELD(this, kValueOffset, value);
 }
 
-
+// 设置读写properties和elements的函数
 ACCESSORS(JSObject, properties, FixedArray, kPropertiesOffset)
 ACCESSORS(JSObject, elements, HeapObject, kElementsOffset)
 
@@ -699,13 +699,13 @@ int JSObject::GetInternalFieldCount() {
   return (Size() - GetHeaderSize()) >> kPointerSizeLog2;
 }
 
-
+// 读某个属性的值
 Object* JSObject::GetInternalField(int index) {
   ASSERT(index < GetInternalFieldCount() && index >= 0);
   return READ_FIELD(this, GetHeaderSize() + (kPointerSize * index));
 }
 
-
+// 写某个属性的值
 void JSObject::SetInternalField(int index, Object* value) {
   ASSERT(index < GetInternalFieldCount() && index >= 0);
   int offset = GetHeaderSize() + (kPointerSize * index);
@@ -852,25 +852,26 @@ int DescriptorArray::Search(String* name) {
 }
 
 
-
+// 索引键
 String* DescriptorArray::GetKey(int descriptor_number) {
   ASSERT(descriptor_number < number_of_descriptors());
   return String::cast(get(ToKeyIndex(descriptor_number)));
 }
 
-
+// 获取值，存储在ContentArray里
 Object* DescriptorArray::GetValue(int descriptor_number) {
   ASSERT(descriptor_number < number_of_descriptors());
+  // 先转化索引，在从ContentArray里获取
   return GetContentArray()->get(ToValueIndex(descriptor_number));
 }
 
-
+// 同上
 Smi* DescriptorArray::GetDetails(int descriptor_number) {
   ASSERT(descriptor_number < number_of_descriptors());
   return Smi::cast(GetContentArray()->get(ToDetailsIndex(descriptor_number)));
 }
 
-
+// 获取某个描述符，存储到desc变量
 void DescriptorArray::Get(int descriptor_number, Descriptor* desc) {
   desc->Init(GetKey(descriptor_number),
              GetValue(descriptor_number),
@@ -885,22 +886,24 @@ void DescriptorArray::Set(int descriptor_number, Descriptor* desc) {
   // Make sure non of the elements in desc are in new space.
   ASSERT(!Heap::InNewSpace(desc->GetKey()));
   ASSERT(!Heap::InNewSpace(desc->GetValue()));
-
+  // DescriptorArray内的数组，第二个元素才开始存储数据，所以需要转化一下索引 
   fast_set(this, ToKeyIndex(descriptor_number), desc->GetKey());
+  // 值和描述符内容存储在另一个数组里（数组的地址存在在DescriptorArray维护的数组的第一个元素），而不是DescriptorArray数组里
   FixedArray* content_array = GetContentArray();
+  // 布局是[value, detail, value, detail...];转化一下对应的索引
   fast_set(content_array, ToValueIndex(descriptor_number), desc->GetValue());
   fast_set(content_array, ToDetailsIndex(descriptor_number),
+           // 是比特的组合，转成数字
            desc->GetDetails().AsSmi());
 }
 
-
+// 交换两个描述符的位置，同时修改DescriptorArray和ContentArray数组里的值
 void DescriptorArray::Swap(int first, int second) {
   fast_swap(this, ToKeyIndex(first), ToKeyIndex(second));
   FixedArray* content_array = GetContentArray();
   fast_swap(content_array, ToValueIndex(first), ToValueIndex(second));
   fast_swap(content_array, ToDetailsIndex(first),  ToDetailsIndex(second));
 }
-
 
 bool Dictionary::requires_slow_elements() {
   Object* max_index_object = get(kPrefixStartIndex);
@@ -1307,7 +1310,7 @@ Address ByteArray::GetDataStartAddress() {
   return reinterpret_cast<Address>(this) - kHeapObjectTag + kHeaderSize;
 }
 
-// 
+//  
 int Map::instance_size() {
   return READ_BYTE_FIELD(this, kInstanceSizeOffset);
 }
@@ -1537,7 +1540,7 @@ ACCESSORS(CallHandlerInfo, data, Object, kDataOffset)
 
 ACCESSORS(TemplateInfo, tag, Object, kTagOffset)
 ACCESSORS(TemplateInfo, property_list, Object, kPropertyListOffset)
-
+// 读取FunctionTemplateInfo属性的函数
 ACCESSORS(FunctionTemplateInfo, serial_number, Object, kSerialNumberOffset)
 ACCESSORS(FunctionTemplateInfo, call_code, Object, kCallCodeOffset)
 ACCESSORS(FunctionTemplateInfo, property_accessors, Object,
@@ -1559,7 +1562,7 @@ ACCESSORS(FunctionTemplateInfo, instance_call_handler, Object,
 ACCESSORS(FunctionTemplateInfo, access_check_info, Object,
           kAccessCheckInfoOffset)
 ACCESSORS(FunctionTemplateInfo, flag, Smi, kFlagOffset)
-
+// 读取ObjectTemplateInfo属性的函数
 ACCESSORS(ObjectTemplateInfo, constructor, Object, kConstructorOffset)
 ACCESSORS(ObjectTemplateInfo, internal_field_count, Object,
           kInternalFieldCountOffset)

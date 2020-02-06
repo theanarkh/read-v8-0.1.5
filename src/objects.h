@@ -382,13 +382,15 @@ class PropertyDetails BASE_EMBEDDED {
 // We use the full 8 bits of the instance_type field to encode heap object
 // instance types.  The high-order bit (bit 7) is set if the object is not a
 // string, and cleared if it is a string.
-// 
+//
+// 第7位（从0开始算）如果是1说明对象不是字符串类型，否则是 
 const uint32_t kIsNotStringMask = 0x80;
 const uint32_t kStringTag = 0x0;
 const uint32_t kNotStringTag = 0x80;
 
 // If bit 7 is clear, bits 5 and 6 are the string's size (short, medium, or
 // long).
+// 对于字符串类型，5，6两位标记字符串的类型，短，中等，长三种类型
 const uint32_t kStringSizeMask = 0x60;
 const uint32_t kShortStringTag = 0x0;
 const uint32_t kMediumStringTag = 0x20;
@@ -396,6 +398,7 @@ const uint32_t kLongStringTag = 0x40;
 
 // If bit 7 is clear, bit 4 indicates that the string is a symbol (if set) or
 // not (if cleared).
+// 第四位标记字符串是不是symbol类型，1则表示是
 const uint32_t kIsSymbolMask = 0x10;
 const uint32_t kNotSymbolTag = 0x0;
 const uint32_t kSymbolTag = 0x10;
@@ -403,12 +406,14 @@ const uint32_t kSymbolTag = 0x10;
 // If bit 7 is clear, and the string representation is a sequential string,
 // then bit 3 indicates whether the string consists of two-byte characters or
 // one-byte characters.
+// 第三位表示字符串是单字节字符还是双字节字符组成的
 const uint32_t kStringEncodingMask = 0x8;
 const uint32_t kTwoByteStringTag = 0x0;
 const uint32_t kAsciiStringTag = 0x8;
 
 // If bit 7 is clear, the low-order 3 bits indicate the representation
 // of the string.
+// 第0，1，2位表示字符串类型，四种
 const uint32_t kStringRepresentationMask = 0x07;
 enum StringRepresentationTag {
   kSeqStringTag = 0x0,
@@ -418,44 +423,31 @@ enum StringRepresentationTag {
 };
 
 enum InstanceType {
+  // 下面都是字符串类型，根据上面的定义，下面的tag标记在8比特上各有自己的位置范围，所以相与的结果不会一样
   SHORT_SYMBOL_TYPE = kShortStringTag | kSymbolTag | kSeqStringTag,
   MEDIUM_SYMBOL_TYPE = kMediumStringTag | kSymbolTag | kSeqStringTag,
   LONG_SYMBOL_TYPE = kLongStringTag | kSymbolTag | kSeqStringTag,
-  SHORT_ASCII_SYMBOL_TYPE =
-      kShortStringTag | kAsciiStringTag | kSymbolTag | kSeqStringTag,
-  MEDIUM_ASCII_SYMBOL_TYPE =
-      kMediumStringTag | kAsciiStringTag | kSymbolTag | kSeqStringTag,
-  LONG_ASCII_SYMBOL_TYPE =
-      kLongStringTag | kAsciiStringTag | kSymbolTag | kSeqStringTag,
+  SHORT_ASCII_SYMBOL_TYPE = kShortStringTag | kAsciiStringTag | kSymbolTag | kSeqStringTag,
+  MEDIUM_ASCII_SYMBOL_TYPE = kMediumStringTag | kAsciiStringTag | kSymbolTag | kSeqStringTag,
+  LONG_ASCII_SYMBOL_TYPE = kLongStringTag | kAsciiStringTag | kSymbolTag | kSeqStringTag,
   SHORT_CONS_SYMBOL_TYPE = kShortStringTag | kSymbolTag | kConsStringTag,
   MEDIUM_CONS_SYMBOL_TYPE = kMediumStringTag | kSymbolTag | kConsStringTag,
   LONG_CONS_SYMBOL_TYPE = kLongStringTag | kSymbolTag | kConsStringTag,
-  SHORT_CONS_ASCII_SYMBOL_TYPE =
-      kShortStringTag | kAsciiStringTag | kSymbolTag | kConsStringTag,
-  MEDIUM_CONS_ASCII_SYMBOL_TYPE =
-      kMediumStringTag | kAsciiStringTag | kSymbolTag | kConsStringTag,
-  LONG_CONS_ASCII_SYMBOL_TYPE =
-      kLongStringTag | kAsciiStringTag | kSymbolTag | kConsStringTag,
+  SHORT_CONS_ASCII_SYMBOL_TYPE = kShortStringTag | kAsciiStringTag | kSymbolTag | kConsStringTag,
+  MEDIUM_CONS_ASCII_SYMBOL_TYPE = kMediumStringTag | kAsciiStringTag | kSymbolTag | kConsStringTag,
+  LONG_CONS_ASCII_SYMBOL_TYPE = kLongStringTag | kAsciiStringTag | kSymbolTag | kConsStringTag,
   SHORT_SLICED_SYMBOL_TYPE = kShortStringTag | kSymbolTag | kSlicedStringTag,
   MEDIUM_SLICED_SYMBOL_TYPE = kMediumStringTag | kSymbolTag | kSlicedStringTag,
   LONG_SLICED_SYMBOL_TYPE = kLongStringTag | kSymbolTag | kSlicedStringTag,
-  SHORT_SLICED_ASCII_SYMBOL_TYPE =
-      kShortStringTag | kAsciiStringTag | kSymbolTag | kSlicedStringTag,
-  MEDIUM_SLICED_ASCII_SYMBOL_TYPE =
-      kMediumStringTag | kAsciiStringTag | kSymbolTag | kSlicedStringTag,
-  LONG_SLICED_ASCII_SYMBOL_TYPE =
-      kLongStringTag | kAsciiStringTag | kSymbolTag | kSlicedStringTag,
-  SHORT_EXTERNAL_SYMBOL_TYPE =
-      kShortStringTag | kSymbolTag | kExternalStringTag,
-  MEDIUM_EXTERNAL_SYMBOL_TYPE =
-      kMediumStringTag | kSymbolTag | kExternalStringTag,
+  SHORT_SLICED_ASCII_SYMBOL_TYPE = kShortStringTag | kAsciiStringTag | kSymbolTag | kSlicedStringTag,
+  MEDIUM_SLICED_ASCII_SYMBOL_TYPE = kMediumStringTag | kAsciiStringTag | kSymbolTag | kSlicedStringTag,
+  LONG_SLICED_ASCII_SYMBOL_TYPE = kLongStringTag | kAsciiStringTag | kSymbolTag | kSlicedStringTag,
+  SHORT_EXTERNAL_SYMBOL_TYPE = kShortStringTag | kSymbolTag | kExternalStringTag,
+  MEDIUM_EXTERNAL_SYMBOL_TYPE = kMediumStringTag | kSymbolTag | kExternalStringTag,
   LONG_EXTERNAL_SYMBOL_TYPE = kLongStringTag | kSymbolTag | kExternalStringTag,
-  SHORT_EXTERNAL_ASCII_SYMBOL_TYPE =
-      kShortStringTag | kAsciiStringTag | kSymbolTag | kExternalStringTag,
-  MEDIUM_EXTERNAL_ASCII_SYMBOL_TYPE =
-      kMediumStringTag | kAsciiStringTag | kSymbolTag | kExternalStringTag,
-  LONG_EXTERNAL_ASCII_SYMBOL_TYPE =
-      kLongStringTag | kAsciiStringTag | kSymbolTag | kExternalStringTag,
+  SHORT_EXTERNAL_ASCII_SYMBOL_TYPE = kShortStringTag | kAsciiStringTag | kSymbolTag | kExternalStringTag,
+  MEDIUM_EXTERNAL_ASCII_SYMBOL_TYPE = kMediumStringTag | kAsciiStringTag | kSymbolTag | kExternalStringTag,
+  LONG_EXTERNAL_ASCII_SYMBOL_TYPE = kLongStringTag | kAsciiStringTag | kSymbolTag | kExternalStringTag,
   SHORT_STRING_TYPE = kShortStringTag | kSeqStringTag,
   MEDIUM_STRING_TYPE = kMediumStringTag | kSeqStringTag,
   LONG_STRING_TYPE = kLongStringTag | kSeqStringTag,
@@ -465,32 +457,26 @@ enum InstanceType {
   SHORT_CONS_STRING_TYPE = kShortStringTag | kConsStringTag,
   MEDIUM_CONS_STRING_TYPE = kMediumStringTag | kConsStringTag,
   LONG_CONS_STRING_TYPE = kLongStringTag | kConsStringTag,
-  SHORT_CONS_ASCII_STRING_TYPE =
-      kShortStringTag | kAsciiStringTag | kConsStringTag,
-  MEDIUM_CONS_ASCII_STRING_TYPE =
-      kMediumStringTag | kAsciiStringTag | kConsStringTag,
-  LONG_CONS_ASCII_STRING_TYPE =
-      kLongStringTag | kAsciiStringTag | kConsStringTag,
+  SHORT_CONS_ASCII_STRING_TYPE = kShortStringTag | kAsciiStringTag | kConsStringTag,
+  MEDIUM_CONS_ASCII_STRING_TYPE = kMediumStringTag | kAsciiStringTag | kConsStringTag,
+  LONG_CONS_ASCII_STRING_TYPE = kLongStringTag | kAsciiStringTag | kConsStringTag,
   SHORT_SLICED_STRING_TYPE = kShortStringTag | kSlicedStringTag,
   MEDIUM_SLICED_STRING_TYPE = kMediumStringTag | kSlicedStringTag,
   LONG_SLICED_STRING_TYPE = kLongStringTag | kSlicedStringTag,
-  SHORT_SLICED_ASCII_STRING_TYPE =
-      kShortStringTag | kAsciiStringTag | kSlicedStringTag,
-  MEDIUM_SLICED_ASCII_STRING_TYPE =
-      kMediumStringTag | kAsciiStringTag | kSlicedStringTag,
-  LONG_SLICED_ASCII_STRING_TYPE =
-      kLongStringTag | kAsciiStringTag | kSlicedStringTag,
+  SHORT_SLICED_ASCII_STRING_TYPE = kShortStringTag | kAsciiStringTag | kSlicedStringTag,
+  MEDIUM_SLICED_ASCII_STRING_TYPE = kMediumStringTag | kAsciiStringTag | kSlicedStringTag,
+  LONG_SLICED_ASCII_STRING_TYPE = kLongStringTag | kAsciiStringTag | kSlicedStringTag,
   SHORT_EXTERNAL_STRING_TYPE = kShortStringTag | kExternalStringTag,
   MEDIUM_EXTERNAL_STRING_TYPE = kMediumStringTag | kExternalStringTag,
   LONG_EXTERNAL_STRING_TYPE = kLongStringTag | kExternalStringTag,
-  SHORT_EXTERNAL_ASCII_STRING_TYPE =
-      kShortStringTag | kAsciiStringTag | kExternalStringTag,
-  MEDIUM_EXTERNAL_ASCII_STRING_TYPE =
-      kMediumStringTag | kAsciiStringTag | kExternalStringTag,
-  LONG_EXTERNAL_ASCII_STRING_TYPE =
-      kLongStringTag | kAsciiStringTag | kExternalStringTag,
+  SHORT_EXTERNAL_ASCII_STRING_TYPE = kShortStringTag | kAsciiStringTag | kExternalStringTag,
+  MEDIUM_EXTERNAL_ASCII_STRING_TYPE = kMediumStringTag | kAsciiStringTag | kExternalStringTag,
+  LONG_EXTERNAL_ASCII_STRING_TYPE = kLongStringTag | kAsciiStringTag | kExternalStringTag,
   LONG_PRIVATE_EXTERNAL_ASCII_STRING_TYPE = LONG_EXTERNAL_ASCII_STRING_TYPE,
-
+  /*
+    下面是所有类型都不属于字符串类型，kNotStringTag是128，即10000000，
+    因为最高一位是0表示是字符串类型，所以10000000保证了大于所有字符串类型的值
+  */
   MAP_TYPE = kNotStringTag,
   HEAP_NUMBER_TYPE,
   FIXED_ARRAY_TYPE,
@@ -705,6 +691,7 @@ class Object BASE_EMBEDDED {
   static const int kSize = 0;  // Object does not take up any space.
 
  private:
+  // 禁止直接创建对象，复制函数，赋值函数
   DISALLOW_IMPLICIT_CONSTRUCTORS(Object);
 };
 
@@ -1217,7 +1204,9 @@ class JSObject: public HeapObject {
 
   // Layout description.
   static const int kPropertiesOffset = HeapObject::kSize;
+  // 指向element和properies的指针
   static const int kElementsOffset = kPropertiesOffset + kPointerSize;
+  // hHeaderSize表示该类属性的最后内存地址
   static const int kHeaderSize = kElementsOffset + kPointerSize;
 
   Object* GetElementWithInterceptor(JSObject* receiver, uint32_t index);
@@ -1351,14 +1340,16 @@ class FixedArray: public Array {
 class DescriptorArray: public FixedArray {
  public:
   // Returns the number of descriptors in the array.
+  // 数组中的元素个数，数组的总长度减一”第一个元素“的索引。因为前n个元素不存储数组元素
   int number_of_descriptors() {
     int len = length();
     return len == 0 ? 0 : len - kFirstIndex;
   }
-
+  // 获取DescriptorArray数组第二元素的值
   int NextEnumerationIndex() {
     if (length() == 0) return PropertyDetails::kInitialIndex;
     Object* obj = get(kEnumerationIndexIndex);
+    // 是smi说明没有cache数组，否则从cache数组里取（保存在里面了）
     if (obj->IsSmi()) {
       return Smi::cast(obj)->value();
     } else {
@@ -1368,16 +1359,18 @@ class DescriptorArray: public FixedArray {
   }
 
   // Set next enumeration index and flush any enum cache.
+  // 设置数组第二个元素的值
   void SetNextEnumerationIndex(int value) {
     fast_set(this, kEnumerationIndexIndex, Smi::FromInt(value));
   }
-
+  // 数组非空，数组第二个元素存的是不是一个数子（是数组指针）
   bool HasEnumCache() {
     return length() > 0 && !get(kEnumerationIndexIndex)->IsSmi();
   }
 
   Object* GetEnumCache() {
     ASSERT(HasEnumCache());
+    // 先获得cache数组，再从中获取另一个数组的值
     FixedArray* bridge = FixedArray::cast(get(kEnumerationIndexIndex));
     return bridge->get(kEnumCacheBridgeCacheIndex);
   }
@@ -1430,7 +1423,7 @@ class DescriptorArray: public FixedArray {
 
   // Constant for denoting key was not found.
   static const int kNotFound = -1;
-
+  // 数组元素的索引
   static const int kContentArrayIndex = 0;
   static const int kEnumerationIndexIndex = 1;
   static const int kFirstIndex = 2;
@@ -1441,6 +1434,7 @@ class DescriptorArray: public FixedArray {
   static const int kEnumCacheBridgeCacheIndex = 1;
 
   // Layout description.
+  //  数组的第一元素执行一个数组，第二个元素指向一个数字或者数组，第三个元素才是数组真正数据的开始
   static const int kContentArrayOffset = FixedArray::kHeaderSize;
   static const int kEnumerationIndexOffset = kContentArrayOffset + kPointerSize;
   static const int kFirstOffset = kEnumerationIndexOffset + kPointerSize;
@@ -1461,6 +1455,7 @@ class DescriptorArray: public FixedArray {
 
  private:
   // Conversion from descriptor number to array indices.
+  // 索引转化
   static int ToKeyIndex(int descriptor_number) {
     return descriptor_number+kFirstIndex;
   }

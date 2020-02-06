@@ -890,8 +890,9 @@ Object* Heap::AllocatePartialMap(InstanceType instance_type,
   return result;
 }
 
-// 同上
+// 分配一个Map对象，保存instance_type和instance_size属性，并初始化其他的属性
 Object* Heap::AllocateMap(InstanceType instance_type, int instance_size) {
+  // 分配一个Map对象
   Object* result = AllocateRawMap(Map::kSize);
   if (result->IsFailure()) return result;
 
@@ -915,10 +916,10 @@ bool Heap::CreateInitialMaps() {
   if (obj->IsFailure()) return false;
 
   // Map::cast cannot be used due to uninitialized map field.
-  // map等于自己
   meta_map_ = reinterpret_cast<Map*>(obj);
+  // 指向自己
   meta_map()->set_map(meta_map());
-  // 初始化fixed_array_map_属性，kHeaderSize是数组中一个元素的地址，小于kHeaderSize的空间是存储数组属性的
+  // 初始化fixed_array_map_属性，kHeaderSize是数组中第一个元素的地址，小于kHeaderSize的空间是存储数组属性的
   obj = AllocatePartialMap(FIXED_ARRAY_TYPE, Array::kHeaderSize);
   if (obj->IsFailure()) return false;
   // 堆对象的前n个字节是map指针，直接cast
@@ -2054,8 +2055,9 @@ Object* Heap::AllocateRawTwoByteString(int length, PretenureFlag pretenure) {
   return result;
 }
 
-
+// 分配一个空数组，即不分配存储元素的空间
 Object* Heap::AllocateEmptyFixedArray() {
+  // 大小是0
   int size = FixedArray::SizeFor(0);
   Object* result = AllocateRaw(size, CODE_SPACE);
   if (result->IsFailure()) return result;

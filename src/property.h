@@ -62,7 +62,7 @@ class Descriptor BASE_EMBEDDED {
 #ifdef DEBUG
   void Print();
 #endif
-
+  // 更新index的值，然后更新details_，见PropertyDetails
   void SetEnumerationIndex(int index) {
     ASSERT(PropertyDetails::IsValidIndex(index));
     details_ = PropertyDetails(details_.attributes(), details_.type(), index);
@@ -75,13 +75,13 @@ class Descriptor BASE_EMBEDDED {
 
  protected:
   Descriptor() : details_(Smi::FromInt(0)) {}
-
+  // 设置属性
   void Init(String* key, Object* value, PropertyDetails details) {
     key_ = key;
     value_ = value;
     details_ = details;
   }
-
+  // detials_有两种初始化方式
   Descriptor(String* key, Object* value, PropertyDetails details)
       : key_(key),
         value_(value),
@@ -302,11 +302,15 @@ class LookupResult BASE_EMBEDDED {
 
 // The DescriptorStream is an abstraction for iterating over a map's
 // instance descriptors.
+// 迭代属性描述符的类
 class DescriptorStream BASE_EMBEDDED {
  public:
   explicit DescriptorStream(DescriptorArray* descriptors, int pos) {
+    // 描述符数组
     descriptors_ = descriptors;
+    // 迭代的当前位置
     pos_ = pos;
+    // 数组长度
     limit_ = descriptors_->number_of_descriptors();
   }
 
@@ -333,9 +337,9 @@ class DescriptorReader: public DescriptorStream {
   PropertyDetails GetDetails() {
     return PropertyDetails(descriptors_->GetDetails(pos_));
   }
-
+  // 把value转数字
   int GetFieldIndex() { return Descriptor::IndexFromValue(GetValue()); }
-
+  // 不能枚举
   bool IsDontEnum() { return GetDetails().IsDontEnum(); }
 
   PropertyType type() { return GetDetails().type(); }
@@ -347,7 +351,7 @@ class DescriptorReader: public DescriptorStream {
     if (t == MAP_TRANSITION || t == CONSTANT_TRANSITION) return true;
     return false;
   }
-
+  // value是个函数
   JSFunction* GetConstantFunction() { return JSFunction::cast(GetValue()); }
 
   AccessorDescriptor* GetCallbacks() {
@@ -362,11 +366,11 @@ class DescriptorReader: public DescriptorStream {
   }
 
   bool Equals(String* name) { return name->Equals(GetKey()); }
-
+  // 修改值，见DescriptorArray
   void ReplaceConstantFunction(JSFunction* value) {
     descriptors_->ReplaceConstantFunction(pos_, value);
   }
-
+  // 返回的内容放到desc里
   void Get(Descriptor* desc) {
     descriptors_->Get(pos_, desc);
   }
