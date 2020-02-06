@@ -352,15 +352,22 @@ HandleScope::Data HandleScope::current_ = { -1, NULL, NULL };
 
 
 int HandleScope::NumberOfHandles() {
+  // block的list长度，每个元素又是一个数组
   int n = thread_local.Blocks()->length();
   if (n == 0) return 0;
+  /*
+    前n-1个数组是满的（已分配），每个的数组的元素个数是kHandleBlockSize,
+    last拿到list最后一个的首地址，next即下一个可分配的地址，两个指针相减得到已分配的元素个数
+  */
   return ((n - 1) * i::kHandleBlockSize) +
        (current_.next - thread_local.Blocks()->last());
 }
 
 
 void** v8::HandleScope::CreateHandle(void* value) {
+  // 获取下一个可用的地址
   void** result = current_.next;
+  // 到达limit的地址了
   if (result == current_.limit) {
     // Make sure there's at least one scope on the stack and that the
     // top of the scope stack isn't a barrier.
@@ -371,8 +378,11 @@ void** v8::HandleScope::CreateHandle(void* value) {
     }
     // If there's more room in the last block, we use that. This is used
     // for fast creation of scopes after scope barriers.
+    // Block是二维数组，每个元素指向一个可以存储数据的数组。非空说明可能有可用的内存空间
     if (!thread_local.Blocks()->is_empty()) {
+      // 拿到list中最后一个元素，得到一个数组首地址，然后再获取他的limit地址，即末地址
       void** limit = &thread_local.Blocks()->last()[i::kHandleBlockSize];
+
       if (current_.limit != limit) {
         current_.limit = limit;
       }
@@ -394,6 +404,7 @@ void** v8::HandleScope::CreateHandle(void* value) {
   // Update the current next field, set the value in the created
   // handle, and return the result.
   ASSERT(result < current_.limit);
+  // 下一个可用的地址
   current_.next = result + 1;
   *result = value;
   return result;

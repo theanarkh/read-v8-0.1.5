@@ -72,6 +72,7 @@ class GlobalHandles::Node : public Malloced {
   // Accessors for next_.
   Node* next() { return next_; }
   void set_next(Node* value) { next_ = value; }
+  // 指针的地址
   Node** next_addr() { return &next_; }
 
   // Accessors for next free node in the free list.
@@ -96,17 +97,19 @@ class GlobalHandles::Node : public Malloced {
   // Make this handle weak.
   void MakeWeak(void* parameter, WeakReferenceCallback callback) {
     LOG(HandleEvent("GlobalHandle::MakeWeak", handle().location()));
+    // 更新统计数据
     if (state_ != WEAK && !IsNearDeath()) {
       GlobalHandles::number_of_weak_handles_++;
       if (object_->IsJSGlobalObject()) {
         GlobalHandles::number_of_global_object_weak_handles_++;
       }
     }
+    // 修改状态和销毁时执行的回调和参数
     state_ = WEAK;
     set_parameter(parameter);
     callback_ = callback;
-  }
-
+    }
+  // 和上面的函数相反
   void ClearWeakness() {
     LOG(HandleEvent("GlobalHandle::ClearWeakness", handle().location()));
     if (state_ == WEAK || IsNearDeath()) {
@@ -208,7 +211,7 @@ Handle<Object> GlobalHandles::Create(Object* value) {
     result = first_free();
     // 获取重用节点在free_list中的第一个节点，first_free指向新的可重用节点 
     set_first_free(result->next_free());
-    // 重新初始化giant节点
+    // 重新初始化该节点
     result->Initialize(value);
   }
   // 返回一个handle对象
@@ -250,7 +253,7 @@ bool GlobalHandles::IsWeak(Object** location) {
   return Node::FromLocation(location)->IsWeak();
 }
 
-// 遍历链表
+// 遍历链表，ObjectVisitor是基类，传进来的是具体的子类（多态）
 void GlobalHandles::IterateWeakRoots(ObjectVisitor* v) {
   // Traversal of GC roots in the global handle list that are marked as
   // WEAK or PENDING.
@@ -275,25 +278,30 @@ void GlobalHandles::MarkWeakRoots(WeakSlotCallback f) {
   }
 }
 
-
+// 垃圾回收的时候处理已经销毁的handle
 void GlobalHandles::PostGarbageCollectionProcessing() {
   // Process weak global handle callbacks. This must be done after the
   // GC is completely done, because the callbacks may invoke arbitrary
   // API functions.
   // At the same time deallocate all DESTORYED nodes
+  // 垃圾回收完之后
   ASSERT(Heap::gc_state() == Heap::NOT_IN_GC);
   Node** p = &head_;
   while (*p != NULL) {
+    // 调用Node的函数
     (*p)->PostGarbageCollectionProcessing();
+    // 销毁了则清理内存
     if ((*p)->state_ == Node::DESTROYED) {
       // Delete the link.
       Node* node = *p;
+      // 指向下一个节点，即从链表中删除该节点
       *p = node->next();  // Update the link.
       delete node;
     } else {
       p = (*p)->next_addr();
     }
   }
+  // 重置free队列的头指针
   set_first_free(NULL);
 }
 
