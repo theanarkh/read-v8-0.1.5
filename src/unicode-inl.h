@@ -148,7 +148,7 @@ uchar CharacterStream::GetNext() {
 #else
 #warning Unknown byte ordering
 #endif
-
+// 把单字节字符存在buffer里，更新偏移
 bool CharacterStream::EncodeAsciiCharacter(uchar c, byte* buffer,
     unsigned capacity, unsigned& offset) {
   if (offset >= capacity) return false;
@@ -156,7 +156,7 @@ bool CharacterStream::EncodeAsciiCharacter(uchar c, byte* buffer,
   offset += 1;
   return true;
 }
-
+// 把多字节字符存在buffer里
 bool CharacterStream::EncodeNonAsciiCharacter(uchar c, byte* buffer,
     unsigned capacity, unsigned& offset) {
   unsigned aligned = (offset + 0x3) & ~0x3;

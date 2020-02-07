@@ -401,16 +401,20 @@ class HandleScope {
 
   class Data {
    public:
+    // 分配了一块内存后，又额外分配的块数
     int extensions;
+    // 下一个可用的位置
     void** next;
+    // 达到limit执行的地址后说明当前内存块用完了
     void** limit;
     inline void Initialize() {
       extensions = -1;
       next = limit = NULL;
     }
   };
-
+  // 当前的HandleScope
   static Data current_;
+  // 上一个HandleScope
   const Data previous_;
 
   /**

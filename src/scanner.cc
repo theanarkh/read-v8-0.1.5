@@ -47,12 +47,12 @@ StaticResource<Scanner::Utf8Decoder> Scanner::utf8_decoder_;
 
 // ----------------------------------------------------------------------------
 // UTF8Buffer
-
+// 管理字符串的类
 UTF8Buffer::UTF8Buffer() : data_(NULL) {
   Initialize(NULL, 0);
 }
 
-
+// 释放存储字符串的内存
 UTF8Buffer::~UTF8Buffer() {
   DeleteArray(data_);
 }
@@ -62,6 +62,7 @@ void UTF8Buffer::Initialize(char* src, int length) {
   DeleteArray(data_);
   data_ = src;
   size_ = length;
+  // 重置位置
   Reset();
 }
 

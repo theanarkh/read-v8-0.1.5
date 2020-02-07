@@ -92,6 +92,7 @@ namespace v8 { namespace internal {
 /*
   class Block
   class ... 
+  前向声明类
 */
 #define DEF_FORWARD_DECLARATION(type) class type;
 NODE_LIST(DEF_FORWARD_DECLARATION)

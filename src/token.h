@@ -206,15 +206,6 @@ class Token {
 // 定义宏T
 #define T(name, string, precedence) name,
   enum Value {
-    /*
-      TOKEN_LIST宏展开后变成
-       T(EOS, "EOS", 0)  
-       ...
-       然后T宏展开后变成
-        EOS
-        ...
-        F开头的会被忽略，因为F等于IGNORE_TOKEN
-    */
     TOKEN_LIST(T, T, IGNORE_TOKEN)
     NUM_TOKENS
   };

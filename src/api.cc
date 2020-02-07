@@ -385,6 +385,7 @@ void** v8::HandleScope::CreateHandle(void* value) {
 
       if (current_.limit != limit) {
         current_.limit = limit;
+        // result = limit - i::kHandleBlockSize; 
       }
     }
 
@@ -396,6 +397,7 @@ void** v8::HandleScope::CreateHandle(void* value) {
       // Add the extension to the global list of blocks, but count the
       // extension as part of the current scope.
       thread_local.Blocks()->Add(result);
+      // 申请了第一块后，又额外申请的块数
       current_.extensions++;
       current_.limit = &result[i::kHandleBlockSize];
     }
@@ -2692,17 +2694,17 @@ void Debug::SendCommand(const uint16_t* command, int length) {
 
 namespace internal {
 
-
+// 返回单例对象
 HandleScopeImplementer* HandleScopeImplementer::instance() {
   return &thread_local;
 }
 
-
+// 静态方法
 char* HandleScopeImplementer::ArchiveThread(char* storage) {
   return thread_local.ArchiveThreadHelper(storage);
 }
 
-
+// 实例方法
 char* HandleScopeImplementer::ArchiveThreadHelper(char* storage) {
   ImplementationUtilities::HandleScopeData* current =
       ImplementationUtilities::CurrentHandleScope();

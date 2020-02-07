@@ -476,7 +476,9 @@ Handle<Object> HandleScopeImplementer::LastEnteredContext() {
 
 
 // If there's a spare block, use it for growing the current scope.
+// 获取一个数组存储handle
 void** HandleScopeImplementer::GetSpareOrNewBlock() {
+  // 上一个handleScope留下来的数组，直接使用
   void** block = (spare != NULL) ?
       reinterpret_cast<void**>(spare) :
       NewArray<void*>(kHandleBlockSize);
@@ -486,17 +488,20 @@ void** HandleScopeImplementer::GetSpareOrNewBlock() {
 
 
 void HandleScopeImplementer::DeleteExtensions(int extensions) {
+  // 把上一个handleScope留下来的一个数组free掉
   if (spare != NULL) {
     DeleteArray(spare);
     spare = NULL;
   }
   for (int i = extensions; i > 1; --i) {
+    // 返回删除的元素
     void** block = blocks.RemoveLast();
 #ifdef DEBUG
     ImplementationUtilities::ZapHandleRange(block, &block[kHandleBlockSize]);
 #endif
     DeleteArray(block);
   }
+  // 最后一个不free，留着备用
   spare = reinterpret_cast<Object**>(blocks.RemoveLast());
 #ifdef DEBUG
   ImplementationUtilities::ZapHandleRange(
