@@ -96,7 +96,7 @@ Address Page::AllocationTop() {
   }
 }
 
-
+// 清除用来做记录集的内存的数据
 void Page::ClearRSet() {
   // This method can be called in all rset states.
   memset(RSetStart(), 0, kRSetEndOffset - kRSetStartOffset);
@@ -107,16 +107,18 @@ void Page::ClearRSet() {
 // | page address | words (6) | bit offset (5) | pointer alignment (2) |
 // The rset address is computed as:
 //    page_address + words * 4
-
+// 计算一个地址在记录集中的位置，并返回虚拟地址
 Address Page::ComputeRSetBitPosition(Address address, int offset,
                                      uint32_t* bitmask) {
   ASSERT(Page::is_rset_in_use());
-
+  // 地址所属的page
   Page* page = Page::FromAddress(address);
+  // 算出address+offset相对记录集来说的偏移
   uint32_t bit_offset = ArithmeticShiftRight(page->Offset(address) + offset,
                                              kObjectAlignmentBits);
+  // 算出偏移在记录集里某个字节中的偏移                                          
   *bitmask = 1 << (bit_offset % kBitsPerInt);
-
+  // 算出偏移在记录集中所属的int（记录集相当于一个int数组），加上page地址，得到虚拟地址
   Address rset_address =
       page->address() + (bit_offset / kBitsPerInt) * kIntSize;
   // The remembered set address is either in the normal remembered set range
@@ -142,10 +144,12 @@ Address Page::ComputeRSetBitPosition(Address address, int offset,
   return rset_address;
 }
 
-
+// 设置记录集
 void Page::SetRSet(Address address, int offset) {
   uint32_t bitmask = 0;
-  Address rset_address = ComputeRSetBitPosition(address, offset, &bitmask);
+  // 记录所属的位置和偏移
+  Address rset_address = ComputeRSetBitPosition(address, offset, &bitmask偏移
+  // 设置
   Memory::uint32_at(rset_address) |= bitmask;
 
   ASSERT(IsRSetSet(address, offset));
@@ -153,6 +157,7 @@ void Page::SetRSet(Address address, int offset) {
 
 
 // Clears the corresponding remembered set bit for a given address.
+// 同上
 void Page::UnsetRSet(Address address, int offset) {
   uint32_t bitmask = 0;
   Address rset_address = ComputeRSetBitPosition(address, offset, &bitmask);
@@ -161,7 +166,7 @@ void Page::UnsetRSet(Address address, int offset) {
   ASSERT(!IsRSetSet(address, offset));
 }
 
-
+// 同上
 bool Page::IsRSetSet(Address address, int offset) {
   uint32_t bitmask = 0;
   Address rset_address = ComputeRSetBitPosition(address, offset, &bitmask);
@@ -197,7 +202,7 @@ bool MemoryAllocator::IsPageInSpace(Page* p, PagedSpace* space) {
          (space == c.owner());
 }
 
-
+// 获取下一页的地址
 Page* MemoryAllocator::GetNextPage(Page* p) {
   ASSERT(p->is_valid());
   // 取出在opaque_header中的有效地址，取高位的值
@@ -268,7 +273,7 @@ Object* NewSpace::AllocateRawInternal(int size_in_bytes,
   if (new_top > alloc_info->limit) {
     return Failure::RetryAfterGC(size_in_bytes, NEW_SPACE);
   }
-  // 地址+低一位的标记
+  // 地址+低一位的标记，转成堆对象的地址表示，即低位置1
   Object* obj = HeapObject::FromAddress(alloc_info->top);
   // 更新指针，指向下一块可分配的内存
   alloc_info->top = new_top;

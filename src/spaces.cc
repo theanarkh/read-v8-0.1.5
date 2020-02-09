@@ -270,7 +270,7 @@ bool MemoryAllocator::Setup(int capacity) {
 
   size_ = 0;
   ChunkInfo info;  // uninitialized element.
-  // 初始化chunks列表和id,max_nof_chunks_大于list的长度的话list会自动扩容
+  // 初始化chunks列表和id,max_nof_chunks_大于list的长度的话list会自动扩容,ChunkId大的在后面，小的id先被Pop出来使用
   for (int i = max_nof_chunks_ - 1; i >= 0; i--) {
     chunks_.Add(info);
     free_chunk_ids_.Add(i);
@@ -327,7 +327,7 @@ void MemoryAllocator::FreeRawMemory(void* mem, size_t length) {
   ASSERT(size_ >= 0);
 }
 
-
+// v8初始化的时候分配的堆内存
 void* MemoryAllocator::ReserveInitialChunk(const size_t requested) {
   ASSERT(initial_chunk_ == NULL);
   // 新建一个VM对象，分配size的虚拟内存，记录在VM对象
@@ -335,6 +335,7 @@ void* MemoryAllocator::ReserveInitialChunk(const size_t requested) {
   CHECK(initial_chunk_ != NULL);
   //是否已经分配了虚拟地址
   if (!initial_chunk_->IsReserved()) {
+    // 失败了，释放VM对象
     delete initial_chunk_;
     initial_chunk_ = NULL;
     return NULL;
@@ -344,7 +345,7 @@ void* MemoryAllocator::ReserveInitialChunk(const size_t requested) {
   ASSERT(initial_chunk_->size() == requested);
   LOG(NewEvent("InitialChunk", initial_chunk_->address(), requested));
   size_ += requested;
-  // 返回虚拟地址
+  // 返回分配内存的首地址
   return initial_chunk_->address();
 }
 
@@ -358,7 +359,7 @@ static int PagesInChunk(Address start, size_t size) {
           - RoundUp(start, Page::kPageSize)) >> Page::kPageSizeBits;
 }
 
-
+// 之前分配的内存不够用，再分配
 Page* MemoryAllocator::AllocatePages(int requested_pages, int* allocated_pages,
                                      PagedSpace* owner) {
   if (requested_pages <= 0) return Page::FromAddress(NULL);
@@ -367,14 +368,14 @@ Page* MemoryAllocator::AllocatePages(int requested_pages, int* allocated_pages,
 
   // There is not enough space to guarantee the desired number pages can be
   // allocated.
-  // 空间不够
+  // 空间不够，只能申请小于请求页数的内存了
   if (size_ + static_cast<int>(chunk_size) > capacity_) {
     // Request as many pages as we can.
-    // 还能分配字节
+    // 还能申请的字节数
     chunk_size = capacity_ - size_;
-    // 还能分配多少页
+    // 还能申请多少页
     requested_pages = chunk_size >> Page::kPageSizeBits;
-
+    // 不够一页了，直接返回申请失败
     if (requested_pages <= 0) return Page::FromAddress(NULL);
   }
   // 分配虚拟内存,chunk_size是申请分配的大小和实际分配的大小
@@ -396,7 +397,7 @@ Page* MemoryAllocator::AllocatePages(int requested_pages, int* allocated_pages,
   return InitializePagesInChunk(chunk_id, *allocated_pages, owner);
 }
 
-// 管理虚拟地址start到start+size的空间，
+// 保存和管理虚拟地址start到start+size的空间，
 Page* MemoryAllocator::CommitPages(Address start, size_t size,
                                    PagedSpace* owner, int* num_pages) {
   ASSERT(start != NULL);
@@ -407,7 +408,7 @@ Page* MemoryAllocator::CommitPages(Address start, size_t size,
   ASSERT(initial_chunk_->address() <= start);
   ASSERT(start + size <= reinterpret_cast<Address>(initial_chunk_->address())
                              + initial_chunk_->size());
-  // 使用mmap从进程虚拟地址从划出start开始大小是size的空间，不满足则返回false
+  // commit，修改内存的属性，使得可用，见platform-linux.ccd的mmap
   if (!initial_chunk_->Commit(start, size)) {
     return Page::FromAddress(NULL);
   }
@@ -430,13 +431,13 @@ bool MemoryAllocator::CommitBlock(Address start, size_t size) {
   ASSERT(initial_chunk_->address() <= start);
   ASSERT(start + size <= reinterpret_cast<Address>(initial_chunk_->address())
                              + initial_chunk_->size());
-
+  // commit，修改内存的属性，使得可用，见platform-linux.ccd的mmap
   if (!initial_chunk_->Commit(start, size)) return false;
   Counters::memory_allocated.Increment(size);
   return true;
 }
 
-
+// 初始化某块内存为page管理的结构
 Page* MemoryAllocator::InitializePagesInChunk(int chunk_id, int pages_in_chunk,
                                               PagedSpace* owner) {
   ASSERT(IsValidChunk(chunk_id));
@@ -458,6 +459,7 @@ Page* MemoryAllocator::InitializePagesInChunk(int chunk_id, int pages_in_chunk,
     Page* p = Page::FromAddress(page_addr);
     // 保存下一页的地址和当前所属的chunk_id
     p->opaque_header = OffsetFrom(page_addr + Page::kPageSize) | chunk_id;
+    // 不是large object
     p->is_normal_page = 1;
     // 指向下一页地址
     page_addr += Page::kPageSize;
@@ -472,7 +474,7 @@ Page* MemoryAllocator::InitializePagesInChunk(int chunk_id, int pages_in_chunk,
   return Page::FromAddress(low);
 }
 
-
+// 释放多个chunk的内存
 Page* MemoryAllocator::FreePages(Page* p) {
   if (!p->is_valid()) return p;
 
@@ -480,14 +482,16 @@ Page* MemoryAllocator::FreePages(Page* p) {
   // 找出同chunk中的第一个page
   Page* first_page = FindFirstPageInSameChunk(p);
   Page* page_to_return = Page::FromAddress(NULL);
-
+  // 不是第一个page
   if (p != first_page) {
     // Find the last page in the same chunk as 'prev'.
     Page* last_page = FindLastPageInSameChunk(p);
+    // 执行p所在chunk的下一个chunk
     first_page = GetNextPage(last_page);  // first page in next chunk
 
     // set the next_page of last_page to NULL
     SetNextPage(last_page, Page::FromAddress(NULL));
+    // p所在的chunk没有被删除
     page_to_return = p;  // return 'p' when exiting
   }
   // 删除多个chunk
@@ -515,22 +519,28 @@ void MemoryAllocator::DeleteChunk(int chunk_id) {
   // allocated with AllocateRawMemory.  Instead we uncommit the virtual
   // memory.
   bool in_initial_chunk = false;
+  // initial_chunk_非空说明之前通过ReserveInitialChunk申请了内存 
   if (initial_chunk_ != NULL) {
     Address start = static_cast<Address>(initial_chunk_->address());
     Address end = start + initial_chunk_->size();
+    // 判断当前删除的chunk管理的内存范围是不是在初始化时申请的内存里
     in_initial_chunk = (start <= c.address()) && (c.address() < end);
   }
-
+  // 释放的是初始化申请的内存的一部分，否则是通过malloc额外申请的
   if (in_initial_chunk) {
     // TODO(1240712): VirtualMemory::Uncommit has a return value which
     // is ignored here.
+    // 撤销chunk对应的内存，可能导致把之前申请的一大块内存切开。由操作系统完成
     initial_chunk_->Uncommit(c.address(), c.size());
     Counters::memory_allocated.Decrement(c.size());
   } else {
     LOG(DeleteEvent("PagedChunk", c.address()));
+    // malloc申请的直接释放就行
     FreeRawMemory(c.address(), c.size());
   }
+  // 重置
   c.init(NULL, 0, NULL);
+  // 回收chunkId
   Push(chunk_id);
 }
 
@@ -543,7 +553,7 @@ Page* MemoryAllocator::FindFirstPageInSameChunk(Page* p) {
   return Page::FromAddress(low);
 }
 
-// 找出最后一个page的地址
+// 找出chunk中的最后一个page的地址
 Page* MemoryAllocator::FindLastPageInSameChunk(Page* p) {
   // 根据page获取所在chunk的id
   int chunk_id = GetChunkId(p);
@@ -595,9 +605,9 @@ bool PagedSpace::Setup(Address start, size_t size) {
   int num_pages = 0;
   // Try to use the virtual memory range passed to us.  If it is too small to
   // contain at least one page, ignore it and allocate instead.
-  // 分配虚拟内存，算出有效的大小
+  // 算出页数
   if (PagesInChunk(start, size) > 0) {
-    // 分配虚拟内存
+    // 
     first_page_ = MemoryAllocator::CommitPages(start, size, this, &num_pages);
   } else {
     int requested_pages = Min(MemoryAllocator::kPagesPerChunk,
@@ -889,7 +899,7 @@ bool NewSpace::Setup(Address start, int size) {
     即从左往右的1位地址有效位
   */
   address_mask_ = ~(size - 1);
-  // 参考semiSpace的分析
+  // 参考SemiSpace的分析
   object_mask_ = address_mask_ | kHeapObjectTag;
   object_expected_ = reinterpret_cast<uint32_t>(start) | kHeapObjectTag;
   // 初始化管理的地址的信息
@@ -1037,7 +1047,7 @@ bool SemiSpace::Setup(Address start, int size) {
   start_ = start;
   // 低于有效范围的掩码，即保证相与后的值小于等于管理的地址范围
   address_mask_ = ~(size - 1);
-  // 计算对象地址掩码，低位是标记位，判断的时候需要保留
+  // 计算堆对象地址掩码，低位是标记位，判断的时候需要保留,kHeapObjectTag是堆对象的标记
   object_mask_ = address_mask_ | kHeapObjectTag;
   // 见contains函数，对象地址里低位是标记位，判断的时候需要带上
   object_expected_ = reinterpret_cast<uint32_t>(start) | kHeapObjectTag;
@@ -1045,7 +1055,6 @@ bool SemiSpace::Setup(Address start, int size) {
   age_mark_ = start_;
   return true;
 }
-ja
 
 void SemiSpace::TearDown() {
   start_ = NULL;
@@ -1054,6 +1063,7 @@ void SemiSpace::TearDown() {
 
 // 扩容
 bool SemiSpace::Double() {
+  // 内存在其他地方分配了，这里校验地址是否合法，即是否分配了
   if (!MemoryAllocator::CommitBlock(high(), capacity_)) return false;
   capacity_ *= 2;
   return true;

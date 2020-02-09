@@ -50,20 +50,21 @@ DEFINE_bool(expose_gc, false, "expose gc extension");  // for debugging
 class SourceCodeCache BASE_EMBEDDED {
  public:
   explicit SourceCodeCache(ScriptType type): type_(type) { }
-
+  // 初始化
   void Initialize(bool create_heap_objects) {
     if (create_heap_objects) {
+      // 空数组，即没有分配存储数据的空间
       cache_ = Heap::empty_fixed_array();
     } else {
       cache_ = NULL;
     }
   }
-
+  // 遍历数组
   void Iterate(ObjectVisitor* v) {
     v->VisitPointer(reinterpret_cast<Object**>(&cache_));
   }
 
-
+  // 存储方式[name，function，name，function]
   bool Lookup(Vector<const char> name, Handle<JSFunction>* handle) {
     for (int i = 0; i < cache_->length(); i+=2) {
       AsciiString* str = AsciiString::cast(cache_->get(i));
@@ -80,11 +81,14 @@ class SourceCodeCache BASE_EMBEDDED {
     ASSERT(fun->IsBoilerplate());
     HandleScope scope;
     int length = cache_->length();
+    // 申请一个新的数组
     Handle<FixedArray> new_array =
         Factory::NewFixedArray(length + 2, TENURED);
+    // 把原来数组的数据复制过去
     cache_->CopyTo(0, *new_array, 0, cache_->length());
     cache_ = *new_array;
     Handle<String> str = Factory::NewStringFromAscii(name, TENURED);
+    // 保存
     cache_->set(length, *str);
     cache_->set(length + 1, *fun);
     Script::cast(fun->shared()->script())->set_type(Smi::FromInt(type_));
@@ -111,13 +115,13 @@ Handle<String> Bootstrapper::NativesSourceLookup(int index) {
   return Handle<String>::cast(cached_source);
 }
 
-
+// 根据name查找函数
 bool Bootstrapper::NativesCacheLookup(Vector<const char> name,
                                       Handle<JSFunction>* handle) {
   return natives_cache.Lookup(name, handle);
 }
 
-
+// 保存name和函数
 void Bootstrapper::NativesCacheAdd(Vector<const char> name,
                                    Handle<JSFunction> fun) {
   natives_cache.Add(name, fun);
@@ -431,9 +435,11 @@ void Genesis::CreateRoots(v8::Handle<v8::ObjectTemplate> global_template,
   // closure and extension object later (we need the empty function
   // and the global object, but in order to create those, we need the
   // global context).
+  // 创建一个全局上下文对象
   global_context_ =
       Handle<Context>::cast(
           GlobalHandles::Create(*Factory::NewGlobalContext()));
+  // 设置
   Top::set_security_context(*global_context());
   Top::set_context(*global_context());
 
@@ -446,6 +452,7 @@ void Genesis::CreateRoots(v8::Handle<v8::ObjectTemplate> global_template,
   global_context()->set_debug_event_listeners(*debug_event_listeners.value());
 
   // Allocate the map for function instances.
+  // 分配一个Map对象，类型是函数
   Handle<Map> fm = Factory::NewMap(JS_FUNCTION_TYPE, JSFunction::kSize);
   global_context()->set_function_instance_map(*fm);
   // Please note that the prototype property for function instances must be

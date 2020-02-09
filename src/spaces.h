@@ -118,7 +118,7 @@ class Page {
   // spaces and addresses in the first 8K of large object pages (ie,
   // the start of large objects but not necessarily derived pointers
   // within them).
-  // 地a按Page对齐，8kb
+  // 获取地址所属的page
   INLINE(static Page* FromAddress(Address a)) {
     return reinterpret_cast<Page*>(OffsetFrom(a) & ~kPageAlignmentMask);
   }
@@ -159,14 +159,17 @@ class Page {
   Address RSetEnd() { return address() + kRSetEndOffset; }
 
   // Checks whether an address is page aligned.
+  // 判断是否是页对齐，即低n位不能有1
   static bool IsAlignedToPageSize(Address a) {
     return 0 == (OffsetFrom(a) & kPageAlignmentMask);
   }
 
   // True if this page is a large object page.
+  // is_normal_page为1说明不是大对象 
   bool IsLargeObjectPage() { return (is_normal_page & 0x1) == 0; }
 
   // Returns the offset of a given address to this page.
+  // 地址a距离page首地址的偏移
   INLINE(int Offset(Address a)) {
     int offset = a - address();
     ASSERT_PAGE_OFFSET(offset);
@@ -174,6 +177,7 @@ class Page {
   }
 
   // Returns the address for a given offset to the this page.
+  // 根据距离page首地址的偏移得到虚拟地址
   Address OffsetToAddress(int offset) {
     ASSERT_PAGE_OFFSET(offset);
     return address() + offset;
@@ -208,7 +212,7 @@ class Page {
   static void set_rset_state(RSetState state) { rset_state_ = state; }
 #endif
 
-  // 8K bytes per page.
+  // 8K bytes per page. 
   static const int kPageSizeBits = 13;
 
   // Page size in bytes. 页大小
@@ -219,9 +223,22 @@ class Page {
 
   // The end offset of the remembered set in a page
   // (heaps are aligned to pointer size).
+  /*
+   kRSetEndOffset表示需要多少个字节用来做记录集
+   kRSetEndOffset = 一页的大小 / 指针的大小 / 一个字节的比特数（因为一个字节可以表示8个标记，即一个比特表示一个标记）
+   kRSetEndOffset = kPageSize / 指针大小 / 8 = kPageSize / kBitsPerPointer 
+   即总大小除以指针的大小，得到整个记录集需要有多少位，一个字节有8位，所有最后得到需要多少个字节
+  */
   static const int kRSetEndOffset= kPageSize / kBitsPerPointer;
 
   // The start offset of the remembered set in a page.
+  /*
+    page前面的n个字节是用来做记录集的，所以记录集就不需要记录前面n个字节本身的标记了
+    kRSetStartOffset = kRSetEndOffset / 字节大小 / 一个字节的比特数
+    kRSetStartOffset = kRSetEndOffset / 字节大小 / 8 
+    即总大小（不需要打标记的字节范围）除以指针大小，得到用来表示这部分内存需要消耗的标记位数，
+    因为一个字节有8个比特，需要再除以8，得到真正需要消耗的字节数。也就是可以节省的字节数。
+  */
   static const int kRSetStartOffset = kRSetEndOffset / kBitsPerPointer;
 
   // The start offset of the object area in a page.
@@ -258,6 +275,7 @@ class Page {
   // used.
 
   // The allocation pointer after relocating objects to this page.
+  // 下面的属性对应的内存空间和记录集是重叠的，即复用
   Address mc_relocation_top;
 
   // The index of the page in its owner space.
@@ -677,6 +695,7 @@ class PagedSpace : public Malloced {
 
   // Checks whether an object/address is in this space.
   inline bool Contains(Address a);
+  // o->address()取到堆对象真正的地址，即去掉了低位的标记位 
   bool Contains(HeapObject* o) { return Contains(o->address()); }
 
   // Finds an object that the given address falls in its body. Returns
@@ -878,7 +897,7 @@ class SemiSpace  BASE_EMBEDDED {
   Address high() { return low() + capacity_; }
 
   // Age mark accessors.
-  Address age_mark() { return ag偏移_mark_; }
+  Address age_mark() { return age_mark_; }
   void set_age_mark(Address mark) { age_mark_ = mark; }
 
   // True if the address is in the address range of this semispace (not
@@ -916,7 +935,7 @@ class SemiSpace  BASE_EMBEDDED {
 
   // Masks and comparison values to test for containment in this semispace.
   // 见SetUp函数
-  uint32_t address_ma函数
+  uint32_t address_mask_;
   uint32_t object_mask_;
   uint32_t object_expected_;
 
