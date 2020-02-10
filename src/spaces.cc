@@ -1334,13 +1334,13 @@ void FreeListNode::set_size(int size_in_bytes) {
   }
 }
 
-
+// 下一个节点的地址
 Address FreeListNode::next() {
   ASSERT(map() == Heap::byte_array_map());
   return Memory::Address_at(address() + kNextOffset);
 }
 
-
+// 保存下一个节点的地址到本对象的属性中
 void FreeListNode::set_next(Address next) {
   ASSERT(map() == Heap::byte_array_map());
   Memory::Address_at(address() + kNextOffset) = next;

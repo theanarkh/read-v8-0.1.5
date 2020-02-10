@@ -67,7 +67,7 @@ bool PageIterator::has_next() {
   return cur_page_ != stop_page_;
 }
 
-
+// 迭代函数，返回当前的地址，更新下一页的地址
 Page* PageIterator::next() {
   ASSERT(has_next());
   Page* result = cur_page_;
@@ -78,7 +78,7 @@ Page* PageIterator::next() {
 
 // -----------------------------------------------------------------------------
 // Page
-
+// 下一个page，在page的对象head里保存了下一个page的地址
 Page* Page::next_page() {
   return MemoryAllocator::GetNextPage(this);
 }
@@ -210,7 +210,7 @@ Page* MemoryAllocator::GetNextPage(Page* p) {
   return Page::FromAddress(AddressFrom<Address>(raw_addr));
 }
 
-// 取opaque_header的低n位
+// 取opaque_header的低n位，是ChunkId
 int MemoryAllocator::GetChunkId(Page* p) {
   ASSERT(p->is_valid());
   return p->opaque_header & Page::kPageAlignmentMask;
@@ -224,7 +224,7 @@ void MemoryAllocator::SetNextPage(Page* prev, Page* next) {
   prev->opaque_header = OffsetFrom(next->address()) | chunk_id;
 }
 
-
+// 获取page所属的Space
 PagedSpace* MemoryAllocator::PageOwner(Page* page) {
   int chunk_id = GetChunkId(page);
   ASSERT(IsValidChunk(chunk_id));

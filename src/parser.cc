@@ -425,7 +425,7 @@ bool ScriptDataImpl::SanityCheck() {
   return true;
 }
 
-
+// 
 int ScriptDataImpl::EntryCount() {
   return (store_.length() - kHeaderSize) / FunctionEntry::kSize;
 }
@@ -734,13 +734,19 @@ FunctionLiteral* Parser::ParseProgram(Handle<String> source,
   Handle<String> no_name = factory()->EmptySymbol();
 
   FunctionLiteral* result = NULL;
-  { Scope* scope = factory()->NewScope(top_scope_, type, inside_with());
+  { 
+    // 新建一个scope
+    Scope* scope = factory()->NewScope(top_scope_, type, inside_with());
+    // 设置解析器的当前作用域是scope，lexical_scope对应保存了之前的scope，析构的时候恢复
     LexicalScope lexical_scope(this, scope);
     TemporaryScope temp_scope(this);
+    // 一个list
     ZoneListWrapper<Statement> body(16);
     bool ok = true;
+    // 开始解析
     ParseSourceElements(&body, Token::EOS, &ok);
     if (ok) {
+      // 返回一个FunctionLiteral对象
       result = NEW(FunctionLiteral(no_name, top_scope_,
                                    body.elements(),
                                    temp_scope.materialized_literal_count(),
@@ -845,11 +851,13 @@ void* Parser::ParseSourceElements(ZoneListWrapper<Statement>* processor,
   // elements. This way, all scripts and functions get their own
   // target stack thus avoiding illegal breaks and continues across
   // functions.
+  // 设置解析器的target_stack_为scope的，析构的时候恢复
   TargetScope scope(this);
 
   ASSERT(processor != NULL);
   while (peek() != end_token) {
     Statement* stat = ParseStatement(NULL, CHECK_OK);
+    // 解析成功，加到list里
     if (stat && !stat->IsEmpty()) processor->Add(stat);
   }
   return 0;
@@ -2814,7 +2822,9 @@ FunctionLiteral* Parser::ParseFunctionLiteral(Handle<String> var_name,
   int num_parameters = 0;
   // Parse function body.
   { Scope::Type type = Scope::FUNCTION_SCOPE;
+    // 新建一个scope，parent是top_scope_
     Scope* scope = factory()->NewScope(top_scope_, type, inside_with());
+    // 更新_top_scope为scope，析构后恢复
     LexicalScope lexical_scope(this, scope);
     TemporaryScope temp_scope(this);
     top_scope_->SetScopeName(name);
@@ -2827,15 +2837,18 @@ FunctionLiteral* Parser::ParseFunctionLiteral(Handle<String> var_name,
     while (!done) {
       Handle<String> param_name = ParseIdentifier(CHECK_OK);
       if (!is_pre_parsing_) {
+        // 函数的参数列表在当前的scope里定义
         top_scope_->AddParameter(top_scope_->Declare(param_name,
                                                      Variable::VAR));
         num_parameters++;
       }
+      // 还没有碰到)说明参数列表还没结束
       done = (peek() == Token::RPAREN);
+      // 参数列表以,分隔
       if (!done) Expect(Token::COMMA, CHECK_OK);
     }
     Expect(Token::RPAREN, CHECK_OK);
-
+    // 接下来解析函数体，以{开始
     Expect(Token::LBRACE, CHECK_OK);
     ZoneListWrapper<Statement> body = factory()->NewList<Statement>(8);
 
@@ -2870,6 +2883,7 @@ FunctionLiteral* Parser::ParseFunctionLiteral(Handle<String> var_name,
       materialized_literal_count = entry.literal_count();
       expected_property_count = entry.property_count();
     } else {
+      // 解析函数体
       ParseSourceElements(&body, Token::RBRACE, CHECK_OK);
       materialized_literal_count = temp_scope.materialized_literal_count();
       expected_property_count = temp_scope.expected_property_count();

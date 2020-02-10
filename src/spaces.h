@@ -1187,6 +1187,7 @@ class FreeListNode: public HeapObject {
   // Obtain a free-list node from a raw address.  This is not a cast because
   // it does not check nor require that the first word at the address is a map
   // pointer.
+  // 类型转换，把一个地址转成FreeListNode
   static FreeListNode* FromAddress(Address address) {
     return reinterpret_cast<FreeListNode*>(HeapObject::FromAddress(address));
   }
