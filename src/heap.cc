@@ -883,7 +883,9 @@ Object* Heap::AllocatePartialMap(InstanceType instance_type,
   if (result->IsFailure()) return result;
 
   // Map::cast cannot be used due to uninitialized map field.
+  // map对象也是堆对象，也有一个map指针，他指向meta_map
   reinterpret_cast<Map*>(result)->set_map(meta_map());
+  // 保存堆对象的类型和大小
   reinterpret_cast<Map*>(result)->set_instance_type(instance_type);
   reinterpret_cast<Map*>(result)->set_instance_size(instance_size);
   reinterpret_cast<Map*>(result)->set_unused_property_fields(0);
@@ -909,7 +911,7 @@ Object* Heap::AllocateMap(InstanceType instance_type, int instance_size) {
   return map;
 }
 
-// 初始化对里的系列map属性
+// 初始化堆里的系列map属性
 bool Heap::CreateInitialMaps() {
   // 新建一个map对象，类型是MAP_TYPE,大小等于一个map对象的大小
   Object* obj = AllocatePartialMap(MAP_TYPE, Map::kSize);

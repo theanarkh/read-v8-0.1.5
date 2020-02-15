@@ -118,18 +118,24 @@ int isgreater(double x, double y) {
 
 
 // Classify floating point number - usually defined in math.h
+// 参考ieee对浮点数的定义
 int fpclassify(double x) {
   // Use the MS-specific _fpclass() for classification.
   int flags = _fpclass(x);
 
   // Determine class. We cannot use a switch statement because
   // the _FPCLASS_ constants are defined as flags.
+  // 非0正值或非0负值
   if (flags & (_FPCLASS_PN | _FPCLASS_NN)) return FP_NORMAL;
+  // 正数0或负数0
   if (flags & (_FPCLASS_PZ | _FPCLASS_NZ)) return FP_ZERO;
+  // 非标准化的正或负值 
   if (flags & (_FPCLASS_PD | _FPCLASS_ND)) return FP_SUBNORMAL;
+  // 正负无穷
   if (flags & (_FPCLASS_PINF | _FPCLASS_NINF)) return FP_INFINITE;
 
   // All cases should be covered by the code above.
+  // 不是数值
   ASSERT(flags & (_FPCLASS_SNAN | _FPCLASS_QNAN));
   return FP_NAN;
 }

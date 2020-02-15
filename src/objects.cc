@@ -1142,9 +1142,12 @@ Object* JSObject::ReplaceConstantFunctionProperty(String* name,
 Object* JSObject::AddSlowProperty(String* name,
                                   Object* value,
                                   PropertyAttributes attributes) {
+  // 属性的控制信息                                  
   PropertyDetails details = PropertyDetails(attributes, NORMAL);
+  // 存在字典里，返回字典的首地址
   Object* result = property_dictionary()->AddStringEntry(name, value, details);
   if (result->IsFailure()) return result;
+  // 扩容了，更新指向的地址
   if (property_dictionary() != result) {
      set_properties(Dictionary::cast(result));
   }
@@ -1155,6 +1158,7 @@ Object* JSObject::AddSlowProperty(String* name,
 Object* JSObject::AddProperty(String* name,
                               Object* value,
                               PropertyAttributes attributes) {
+  // 字段模式                              
   if (HasFastProperties()) {
     // Ensure the descriptor array does not get too big.
     if (map()->instance_descriptors()->number_of_descriptors() <
