@@ -62,7 +62,7 @@ HeapObject* HeapObjectIterator::next() {
 
 // -----------------------------------------------------------------------------
 // PageIterator
-
+// 还没到顶
 bool PageIterator::has_next() {
   return cur_page_ != stop_page_;
 }
@@ -148,7 +148,7 @@ Address Page::ComputeRSetBitPosition(Address address, int offset,
 void Page::SetRSet(Address address, int offset) {
   uint32_t bitmask = 0;
   // 记录所属的位置和偏移
-  Address rset_address = ComputeRSetBitPosition(address, offset, &bitmask偏移
+  Address rset_address = ComputeRSetBitPosition(address, offset, &bitmask);
   // 设置
   Memory::uint32_at(rset_address) |= bitmask;
 
@@ -267,9 +267,9 @@ int LargeObjectSpace::ExtraRSetBytesFor(int object_size) {
 // 分配内存
 Object* NewSpace::AllocateRawInternal(int size_in_bytes,
                                       AllocationInfo* alloc_info) {
-  
+  // alloc_info->top保存了该空间当前可分配的地址,加上当前申请分配的                                 
   Address new_top = alloc_info->top + size_in_bytes;
-  // 内存不够了
+  // 超过了内存大小
   if (new_top > alloc_info->limit) {
     return Failure::RetryAfterGC(size_in_bytes, NEW_SPACE);
   }

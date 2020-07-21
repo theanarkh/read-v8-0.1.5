@@ -225,8 +225,9 @@ template <class T> class Handle {
 template <class T> class Local : public Handle<T> {
  public:
   Local();
-  // 调用Local函数的时候S被替换成对应的类型，结果是Handle底层的val_指向一个T类型的对象
+  // 调用Local函数的时候S被替换成that对应的类型，结果是Handle底层的val_指向一个T类型的对象
   template <class S> inline Local(Local<S> that)
+      // *that即取得他底层对象的地址
       : Handle<T>(reinterpret_cast<T*>(*that)) {
     /**
      * This check fails when trying to convert between incompatible
@@ -421,8 +422,11 @@ class HandleScope {
    * Re-establishes the previous scope state. Should not be called for
    * any other scope than the current scope and not more than once.
    */
+  // HandleScope析构的时候调用
   void RestorePreviousState() {
+    // 不释放第一块内存,如果后面需要内存时这个使用
     if (current_.extensions > 0) DeleteExtensions();
+    // 出栈，指向前面那个
     current_ = previous_;
 #ifdef DEBUG
     ZapRange(current_.next, current_.limit);
@@ -434,6 +438,7 @@ class HandleScope {
   void** RawClose(void** value);
 
   /** Deallocates any extensions used by the current scope.*/
+  // 释放额外申请的内存
   static void DeleteExtensions();
 
 #ifdef DEBUG

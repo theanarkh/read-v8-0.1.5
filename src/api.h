@@ -360,7 +360,7 @@ class HandleScopeImplementer {
     ignore_out_of_memory = false;
     call_depth = 0;
   }
-
+  // 单例
   static HandleScopeImplementer* instance();
 
   // Threading support for handle data.

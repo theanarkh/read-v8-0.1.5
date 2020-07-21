@@ -125,6 +125,10 @@ bool Heap::ShouldBePromoted(Address old_address, int object_size) {
   // An object should be promoted if:
   // - the object has survived a scavenge operation or
   // - to space is already 25% full.
+  /*
+    小于age_mark说明已经经过了一次gc回收了，第二次的时候还存活则可以晋升到老生代
+    age_mark是from区的值，但是是在from区和to区交换之后，所以其实是to区的值
+  */
   return old_address < new_space_->age_mark()
       || (new_space_->Size() + object_size) >= (new_space_->Capacity() >> 2);
 }

@@ -37,6 +37,7 @@ class GlobalHandles::Node : public Malloced {
 
   void Initialize(Object* object) {
     // Set the initial value of the handle.
+    // 指向堆对象地址
     object_ = object;
     state_  = NORMAL;
     parameter_or_next_free_.parameter = NULL;
@@ -76,6 +77,7 @@ class GlobalHandles::Node : public Malloced {
   Node** next_addr() { return &next_; }
 
   // Accessors for next free node in the free list.
+  // 用于销毁状态的时候，在空闲链表的操作
   Node* next_free() {
     ASSERT(state_ == DESTROYED);
     return parameter_or_next_free_.next_free;
@@ -85,13 +87,16 @@ class GlobalHandles::Node : public Malloced {
     parameter_or_next_free_.next_free = value;
   }
 
-  // Returns a link from the handle.
+  // Returns a link from the handle. location指向Node对象的object_属性的地址
   static Node* FromLocation(Object** location) {
+    // object_属性在Node对象的首地址
     ASSERT(OFFSET_OF(Node, object_) == 0);
+    // 直接转成Node指针，因为object_就是Node对象的首地址
     return reinterpret_cast<Node*>(location);
   }
 
   // Returns the handle.
+  // 返回object_属性的地址，即对象的首地址
   Handle<Object> handle() { return Handle<Object>(&object_); }
 
   // Make this handle weak.
@@ -104,7 +109,7 @@ class GlobalHandles::Node : public Malloced {
         GlobalHandles::number_of_global_object_weak_handles_++;
       }
     }
-    // 修改状态和销毁时执行的回调和参数
+    // 修改状态和待销毁时执行的回调和参数
     state_ = WEAK;
     set_parameter(parameter);
     callback_ = callback;
@@ -131,7 +136,7 @@ class GlobalHandles::Node : public Malloced {
     return state_ == WEAK;
   }
 
-  // Returns the id for this weak handle.
+  // Returns the id for this weak handle. 参数的存取
   void set_parameter(void* parameter) {
     ASSERT(state_ != DESTROYED);
     parameter_or_next_free_.parameter = parameter;
@@ -154,6 +159,7 @@ class GlobalHandles::Node : public Malloced {
     // behavior.
     WeakReferenceCallback func = callback();
     if (func != NULL) {
+      // 可能会更新node的状态
       func(v8::Persistent<v8::Object>(ToApi<v8::Object>(handle())), par);
     }
   }
@@ -173,10 +179,11 @@ class GlobalHandles::Node : public Malloced {
   State state_;
 
  private:
-  // Handle specific callback.
+  // Handle specific callback. 待销毁时执行的回调
   WeakReferenceCallback callback_;
   // Provided data for callback.  In DESTROYED state, this is used for
   // the free list link.
+  // next_free是用于销毁状态的node，这时候parameter已经不需要了，不是销毁状态的时候，next_free也不会用到 
   union {
     void* parameter;
     Node* next_free;
@@ -214,7 +221,7 @@ Handle<Object> GlobalHandles::Create(Object* value) {
     // 重新初始化该节点
     result->Initialize(value);
   }
-  // 返回一个handle对象
+  // 返回Node对象的首地址
   return result->handle();
 }
 
@@ -288,20 +295,22 @@ void GlobalHandles::PostGarbageCollectionProcessing() {
   ASSERT(Heap::gc_state() == Heap::NOT_IN_GC);
   Node** p = &head_;
   while (*p != NULL) {
-    // 调用Node的函数
+    // 调用Node的函数，可能会更新node的状态
     (*p)->PostGarbageCollectionProcessing();
-    // 销毁了则清理内存
+    // 销毁的节点会放到free链表
     if ((*p)->state_ == Node::DESTROYED) {
       // Delete the link.
       Node* node = *p;
       // 指向下一个节点，即从链表中删除该节点
       *p = node->next();  // Update the link.
+      // 释放node的内存
       delete node;
     } else {
+      // 因为p是二级指针，说明指向node的next域的地址。*p取得node的下一个节点地址
       p = (*p)->next_addr();
     }
   }
-  // 重置free队列的头指针
+  // 重置free队列的头指针,因为链表的节点都被释放了  
   set_first_free(NULL);
 }
 

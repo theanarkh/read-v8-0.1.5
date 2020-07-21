@@ -565,7 +565,9 @@ void Heap::Scavenge() {
 
   // Flip the semispaces.  After flipping, to space is empty, from space has
   // live objects.
+  // from区和to区互换，to区变成空白，from区则分配了各种对象
   new_space_->Flip();
+  // 重置to区的指针，因为to区变空闲了
   new_space_->ResetAllocationInfo();
 
   // We need to sweep newly copied objects which can be in either the to space
@@ -582,6 +584,7 @@ void Heap::Scavenge() {
   // in size.  Using the new space to record promoted addresses makes the
   // scavenge collector agnostic to the allocation strategy (eg, linear or
   // free-list) used in old space.
+  // 空闲区的头尾指针
   Address new_mark = new_space_->ToSpaceLow();
   Address promoted_mark = new_space_->ToSpaceHigh();
   promoted_top = new_space_->ToSpaceHigh();
@@ -768,7 +771,7 @@ void Heap::RecordCopiedObject(HeapObject* obj) {
 }
 #endif  // defined(DEBUG) || defined(ENABLE_LOGGING_AND_PROFILING)
 
-
+// 复制
 HeapObject* Heap::MigrateObject(HeapObject** source_p,
                                 HeapObject* target,
                                 int size) {

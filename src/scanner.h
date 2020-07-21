@@ -33,7 +33,7 @@
 
 namespace v8 { namespace internal {
 
-
+// 管理字符串的类
 class UTF8Buffer {
  public:
   UTF8Buffer();

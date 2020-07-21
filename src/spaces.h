@@ -910,13 +910,13 @@ class SemiSpace  BASE_EMBEDDED {
 
   // True if the object is a heap object in the address range of this
   // semispace (not necessarily below the allocation pointer).
-  // 类似上面的逻辑，但是堆对象低位是标记，判断时候需要处理一下，加SetUp
+  // 类似上面的逻辑，但是堆对象低位是标记，判断时候需要处理一下
   bool Contains(Object* o) {
     return (reinterpret_cast<uint32_t>(o) & object_mask_) == object_expected_;
   }
 
   // The offset of an address from the begining of the space.
-  // 距离开始地址的p
+  // 距离开始地址的距离
   int SpaceOffsetForAddress(Address addr) { return addr - low(); }
 
 #ifdef DEBUG
@@ -1431,7 +1431,7 @@ class OldSpace : public PagedSpace {
 
 // -----------------------------------------------------------------------------
 // Old space for all map objects
-
+// 存储map对象的空间
 class MapSpace : public PagedSpace {
  public:
   // Creates a map space object with a maximum capacity.
