@@ -1306,6 +1306,7 @@ class FixedArray: public Array {
   static inline FixedArray* cast(Object* obj);
 
   // Dispatched behavior.
+  // 算出自己所占的内存大小
   int FixedArraySize() { return SizeFor(length()); }
   void FixedArrayIterateBody(ObjectVisitor* v);
 #ifdef DEBUG
@@ -1587,7 +1588,7 @@ class HashTable: public FixedArray {
   uint32_t FindInsertionEntry(Object* key, uint32_t hash);
 
   // Returns the index for an entry (of the key)
-  // 根据元素的索引算出在哈希表中的相对内存偏移
+  // 根据元素的索引算出在哈希表中的相对真正偏移
   static inline int EntryToIndex(int entry) {
     return (entry * kElementSize) + kElementsStartIndex;
   }
@@ -1610,7 +1611,7 @@ class HashTable: public FixedArray {
 
 
   // Returns probe entry.
-  // 哈希冲突时，下一个索引的位置
+  // 哈希冲突时，下一个索引的位置，取余保证位置再哈希表有效元素的范围
   static uint32_t GetProbe(uint32_t hash, uint32_t number, uint32_t size) {
     ASSERT(IsPowerOf2(size));
     return (hash + GetProbeOffset(number)) & (size - 1);
@@ -1655,24 +1656,27 @@ class SymbolTable: public HashTable<0, 1> {
 // if key == undefined the triple is empty.
 // if key == null the triple has been deleted.
 // otherwise key contains the name of a property.
+// 字典基类，prefix大小为两个指针元素，数组中每个元素大小是3个指针
 class DictionaryBase: public HashTable<2, 3> {};
 
 class Dictionary: public DictionaryBase {
  public:
-  // Returns the value at entry.
+  // 一个元素是三个指针，第二个指针指向值，所以加一
   Object* ValueAt(int entry) { return get(EntryToIndex(entry)+1); }
 
-  // Set the value for entry.
+  // 设置值
   void ValueAtPut(int entry, Object* value) {
     set(EntryToIndex(entry)+1, value);
   }
 
   // Returns the property details for the property at entry.
+  // 第三个指针是detail
   PropertyDetails DetailsAt(int entry) {
     return PropertyDetails(Smi::cast(get(EntryToIndex(entry) + 2)));
   }
 
   // Set the details for entry.
+  // 设置detail
   void DetailsAtPut(int entry, PropertyDetails value) {
     set(EntryToIndex(entry) + 2, value.AsSmi());
   }
@@ -1813,6 +1817,10 @@ class ByteArray: public Array {
   /*
     ByteArray类没有定义自己的属性，他是根据length算出对象的大小，
     然后在分配内存的时候，多分配一块存储数组元素的内存
+    const int kObjectAlignmentBits = 2;
+    const int kObjectAlignmentMask = (1 << kObjectAlignmentBits) - 1;
+    #define OBJECT_SIZE_ALIGN(value)  ((value + kObjectAlignmentMask) & ~kObjectAlignmentMask)
+    由此可知，按四个字节对齐。OBJECT_SIZE_ALIGN的作用的是不够4字节的，会多分配几个字节，使得按四字节对齐。~kObjectAlignmentMask是低两位是0，即按四字节对齐。比如value已经4字节对齐了，则(4 + 0 +3) & ~3 =4，如果value没有对齐，假设是5，则（4 + 1 +3） & ~3 = 8;如果value等于6，（4 + 2 + 3） & ~3 = 8;以此类推。
   */
   static int SizeFor(int length) {
     return kHeaderSize + OBJECT_SIZE_ALIGN(length);

@@ -2401,7 +2401,7 @@ void FixedArray::FixedArrayIterateBody(ObjectVisitor* v) {
   IteratePointers(v, kHeaderSize, kHeaderSize + length() * kPointerSize);
 }
 
-
+// key代表的值是否在数组中
 static bool HasKey(FixedArray* array, Object* key) {
   int len0 = array->length();
   for (int i = 0; i < len0; i++) {
@@ -2417,27 +2417,32 @@ static bool HasKey(FixedArray* array, Object* key) {
 
 
 Object* FixedArray::AddKeysFromJSArray(JSArray* array) {
-  // Remove array holes from array if any.
+  // 把数组中空洞元素移除，相当于shrink
   Object* object = array->RemoveHoles();
   if (object->IsFailure()) return object;
+  // 拿到有效元素
   JSArray* compacted_array = JSArray::cast(object);
 
   // Allocate a temporary fixed array.
+  // 数组长度
   int compacted_array_length = Smi::cast(compacted_array->length())->value();
+  // 分配一个新的数组
   object = Heap::AllocateFixedArray(compacted_array_length);
   if (object->IsFailure()) return object;
   FixedArray* key_array = FixedArray::cast(object);
 
   // Copy the elements from the JSArray to the temporary fixed array.
+  // 逐个复制过去
   for (int i = 0; i < compacted_array_length; i++) {
     key_array->set(i, compacted_array->GetElement(i));
   }
 
   // Compute the union of this and the temporary fixed array.
+  // 去重合成新数组返回
   return UnionOfKeys(key_array);
 }
 
-
+// 把this和other去重后合成一个数组
 Object* FixedArray::UnionOfKeys(FixedArray* other) {
   int len0 = length();
   int len1 = other->length();
@@ -2447,19 +2452,23 @@ Object* FixedArray::UnionOfKeys(FixedArray* other) {
 
   // Compute how many elements are not in this.
   int extra = 0;
+  // 遍历other，算出多少个元素不在this中
   for (int y = 0; y < len1; y++) {
     if (!HasKey(this, other->get(y))) extra++;
   }
 
   // Allocate the result
+  // 分配新的数组
   Object* obj = Heap::AllocateFixedArray(len0 + extra);
   if (obj->IsFailure()) return obj;
   // Fill in the content
   FixedArray* result = FixedArray::cast(obj);
+  // 把之前的元素先复制过去
   for (int i = 0; i < len0; i++) {
     result->set(i, get(i));
   }
   // Fill in the extra keys.
+  // 把新成员也复制过去
   int index = 0;
   for (int y = 0; y < len1; y++) {
     if (!HasKey(this, other->get(y))) {
@@ -2475,11 +2484,12 @@ Object* FixedArray::UnionOfKeys(FixedArray* other) {
 Object* FixedArray::Copy() {
   int len = length();
   if (len == 0) return this;
+  // 分配一个新的数组
   Object* obj = Heap::AllocateFixedArray(len);
   if (obj->IsFailure()) return obj;
   FixedArray* result = FixedArray::cast(obj);
   WriteBarrierMode mode = result->GetWriteBarrierMode();
-  // Copy the content
+  // 逐个元素复制过去
   for (int i = 0; i < len; i++) {
     result->set(i, get(i), mode);
   }
@@ -2489,12 +2499,14 @@ Object* FixedArray::Copy() {
 
 Object* FixedArray::CopySize(int new_length) {
   if (new_length == 0) return Heap::empty_fixed_array();
+  // 分配一个新的数组
   Object* obj = Heap::AllocateFixedArray(new_length);
   if (obj->IsFailure()) return obj;
   FixedArray* result = FixedArray::cast(obj);
   WriteBarrierMode mode = result->GetWriteBarrierMode();
   // Copy the content
   int len = length();
+  // 取小者
   if (new_length < len) len = new_length;
   for (int i = 0; i < len; i++) {
     result->set(i, get(i), mode);
@@ -4604,15 +4616,17 @@ bool JSObject::ShouldHaveFastElements() {
       (length / (2 * Dictionary::kElementSize));
 }
 
-
+// 删除空的元素
 Object* Dictionary::RemoveHoles() {
   int capacity = Capacity();
+  // 当前已使用的元素个数，分配一个新的数组
   Object* obj = Allocate(NumberOfElements());
   if (obj->IsFailure()) return obj;
   Dictionary* dict = Dictionary::cast(obj);
   uint32_t pos = 0;
   for (int i = 0; i < capacity; i++) {
     Object* k = KeyAt(i);
+    // 有效元素则追加到新的数组
     if (IsKey(k)) {
       dict->AddNumberEntry(pos++, ValueAt(i), DetailsAt(i));
     }
@@ -4633,18 +4647,30 @@ void Dictionary::CopyValuesTo(FixedArray* elements) {
 
 
 Object* JSArray::RemoveHoles() {
+  // 顺序存储模式
   if (HasFastElements()) {
     int len = Smi::cast(length())->value();
+    // 保存第一个hole的位置
     int pos = 0;
     FixedArray* elms = FixedArray::cast(elements());
     for (int index = 0; index < len; index++) {
       Object* e = elms->get(index);
+      /*
+        pos保存了假设的hole位置，如果是hole，
+        则不进入if中，否则会进入if，更新hole，
+        假设下一个位置是hole，当index != pos成立，
+        把index位置的元素移到pos的位置，即填充第一个hole，
+        pos移到第一个位置
+      */
       if (!e->IsTheHole()) {
+        // 和原来位置一样则不需要修改，否则移动到pos位置（记录了第一个hole的位置）
         if (index != pos) elms->set(pos, e);
+        // 记录下一个hole的位置（这是假设的，如果下一个不是hole，下一次循环会往后假设）
         pos++;
       }
     }
     set_length(Smi::FromInt(pos));
+    // pos后面就是hole
     for (int index = pos; index < len; index++) {
       elms->set_the_hole(index);
     }
@@ -4838,7 +4864,7 @@ void FixedArray::Swap(int i, int j) {
   set(j, temp);
 }
 
-
+// 插入排序，每轮选择一个元素插入之前已经有序的队列
 static void InsertionSortPairs(FixedArray* content, FixedArray* smis) {
   int len = smis->length();
   for (int i = 1; i < len; i++) {
@@ -4915,6 +4941,7 @@ void FixedArray::SortPairs(FixedArray* smis) {
     return;
   }
   // Check the range of indices.
+  // 选择第一个元素作为最值
   int min_index = Smi::cast(smis->get(0))->value();
   int max_index = min_index;
   int i;
@@ -5107,42 +5134,49 @@ class Dictionary::StringKey : public Dictionary::Key {
 // Utf8Key carries a vector of chars as key.
 class SymbolTable::Utf8Key : public SymbolTable::Key {
  public:
+  // key对应的内容 
   explicit Utf8Key(Vector<const char> string)
       : string_(string), hash_(0) { }
-
+  // key是否相等
   bool IsMatch(Object* other) {
     if (!other->IsString()) return false;
     return String::cast(other)->IsEqualTo(string_);
   }
-
+  // 返回哈希函数，由String类提供
   HashFunction GetHashFunction() {
     return StringHash;
   }
-
+  // 哈希函数
   uint32_t Hash() {
+    // 计算过了则直接返回
     if (hash_ != 0) return hash_;
     unibrow::Utf8InputBuffer<> buffer(string_.start(),
                                       static_cast<unsigned>(string_.length()));
     chars_ = buffer.Length();
+    // 否则用String类提供的函数计算
     hash_ = String::ComputeHashCode(&buffer, chars_);
     return hash_;
   }
-
+  // 根据key申请一个包含了key内容的堆对象
   Object* GetObject() {
+    // 还没有计算哈希值则计算
     if (hash_ == 0) Hash();
     unibrow::Utf8InputBuffer<> buffer(string_.start(),
                                       static_cast<unsigned>(string_.length()));
+    // 申请一个Symbol对象，实际上是一个字符串对象                                  
     return Heap::AllocateSymbol(&buffer, chars_, hash_);
   }
-
+  // 返回obj的哈希值
   static uint32_t StringHash(Object* obj) {
     return String::cast(obj)->Hash();
   }
-
+  // key是否是字符串
   bool IsStringKey() { return true; }
-
+  // key的字符串值
   Vector<const char> string_;
+  // key对应的哈希值
   uint32_t hash_;
+  // key字符串的长度
   int chars_;  // Caches the number of characters when computing the hash code.
 };
 
@@ -5164,7 +5198,7 @@ class SymbolTable::StringKey : public SymbolTable::Key {
   uint32_t Hash() { return string_->Hash(); }
 
   Object* GetObject() {
-    // Transform string to symbol if possible.
+    // 找出字符串对应的map类型
     Map* map = Heap::SymbolMapForString(string_);
     if (map != NULL) {
       string_->set_map(map);
@@ -5229,16 +5263,19 @@ int HashTable<prefix_size, element_size>::FindEntry(Key* key) {
   // 获取对应的键
   Object* element = KeyAt(entry);
   uint32_t passed_elements = 0;
-  // 有效并match则返回
+  // 有值
   if (!element->IsNull()) {
+    // 匹配则直接返回
     if (!element->IsUndefined() && key->IsMatch(element)) return entry;
-    // 只有一个元素并且还不相等，不用找了，直接返回找不到
+    // 不匹配则判断是不是所有元素都找过了，是则直接返回找不到
     if (++passed_elements == nof) return -1;
   }
+  // 继续找...
   /*
-    哈希表解决冲突方式是开发地址法，所以继续找下一个位置的元素，
+    因为哈希表解决冲突方式是开发地址法，所以继续找下一个位置的元素，
     直到undefined，说明到底了，极端的情况下，遍历的每个元素都有值了，
-    但都不等于想要找的值，所以下面passed_elements那里也需要判断，否则死循环
+    但都不等于想要找的值，所以下面passed_elements那里也需要判断，
+    判断是不是遍历了所有值了，否则死循环
   */
   for (uint32_t i = 1; !element->IsUndefined(); i++) {
     entry = GetProbe(hash, i, capacity);
@@ -5255,35 +5292,43 @@ int HashTable<prefix_size, element_size>::FindEntry(Key* key) {
 
 template<int prefix_size, int element_size>
 Object* HashTable<prefix_size, element_size>::EnsureCapacity(int n, Key* key) {
+  // 旧的容量
   int capacity = Capacity();
-  // 已使用加上待添加的个数
+  // 已使用加上待添加的元素个数
   int nof = NumberOfElements() + n;
   // Make sure 20% is free
   // n+n/4如果小于容量则说明剩余空间小于20%了。假设是等于，说明n/4==capacity/5
   if (nof + (nof >> 2) <= capacity) return this;
-
+  // 分配一个新的数组
   Object* obj = Allocate(nof * 2);
   if (obj->IsFailure()) return obj;
   HashTable* dict = HashTable::cast(obj);
   WriteBarrierMode mode = dict->GetWriteBarrierMode();
 
-  // Copy prefix to new array.
+  // 把prefix先复制过去
   for (int i = kPrefixStartIndex; i < kPrefixStartIndex + prefix_size; i++) {
     dict->set(i, get(i), mode);
   }
   // Rehash the elements.
   uint32_t (*Hash)(Object* key) = key->GetHashFunction();
+  // 遍历之前的哈希表（数组）
   for (int i = 0; i < capacity; i++) {
+    // 根据逻辑索引算出真正的索引 
     uint32_t from_index = EntryToIndex(i);
+    // 拿到索引的对应的元素
     Object* key = get(from_index);
+    // 有值
     if (IsKey(key)) {
+      // 重新哈希，并且找到在新哈希表的逻辑位置，再算出实际的位置
       uint32_t insertion_index =
           EntryToIndex(dict->FindInsertionEntry(key, Hash(key)));
+      // 写入新的哈希表，需要复制的大小由element_size决定，可能需要复制多个指针的值
       for (int j = 0; j < element_size; j++) {
         dict->set(insertion_index + j, get(from_index + j), mode);
       }
     }
   }
+  // 设置已使用元素的个数
   dict->SetNumberOfElements(NumberOfElements());
   return dict;
 }
@@ -5327,19 +5372,20 @@ Object* SymbolTable::LookupSymbol(Vector<const char> str, Object** s) {
 
 // 从哈希表中查找一个key的值
 Object* SymbolTable::LookupKey(Key* key, Object** s) {
+  // 根据key找到哈希表中的相对位置，如果存在的话
   int entry = FindEntry(key);
 
-  // Symbol already in table.
+  // 已经存在哈希表，则返回值
   if (entry != -1) {
     *s = KeyAt(entry);
     return this;
   }
 
-  // Adding new symbol. Grow table if needed.
+  // 不存在则新增，必要的时候扩容
   Object* obj = EnsureCapacity(1, key);
   if (obj->IsFailure()) return obj;
 
-  // Create symbol object.
+  // 创建key对应的对象
   Object* symbol = key->GetObject();
   if (symbol->IsFailure()) return symbol;
 
@@ -5349,8 +5395,11 @@ Object* SymbolTable::LookupKey(Key* key, Object** s) {
   SymbolTable* table = reinterpret_cast<SymbolTable*>(obj);
 
   // Add the new symbol and return it along with the symbol table.
+  // 找到插入的相对位置
   entry = table->FindInsertionEntry(symbol, key->Hash());
+  // 算出插入的真正位置，插入哈希表
   table->set(EntryToIndex(entry), symbol);
+  // 已使用元素加一
   table->ElementAdded();
   *s = symbol;
   return table;
@@ -5361,6 +5410,7 @@ Object* Dictionary::Allocate(int at_least_space_for) {
   Object* obj = DictionaryBase::Allocate(at_least_space_for);
   // Initialize the next enumeration index.
   if (!obj->IsFailure()) {
+    // 初始化序号
     Dictionary::cast(obj)->
         SetNextEnumerationIndex(PropertyDetails::kInitialIndex);
   }
@@ -5368,15 +5418,19 @@ Object* Dictionary::Allocate(int at_least_space_for) {
 }
 
 Object* Dictionary::GenerateNewEnumerationIndices() {
+  // 当前有效元素个数
   int length = NumberOfElements();
 
   // Allocate and initialize iteration order array.
+  // 分配新的数组
   Object* obj = Heap::AllocateFixedArray(length);
   if (obj->IsFailure()) return obj;
   FixedArray* iteration_order = FixedArray::cast(obj);
+  // 按序存储0....length - 1
   for (int i = 0; i < length; i++) iteration_order->set(i, Smi::FromInt(i));
 
   // Allocate array with enumeration order.
+  // 再分配一个数组
   obj = Heap::AllocateFixedArray(length);
   if (obj->IsFailure()) return obj;
   FixedArray* enumeration_order = FixedArray::cast(obj);
@@ -5384,6 +5438,7 @@ Object* Dictionary::GenerateNewEnumerationIndices() {
   // Fill the enumeration order array with property details.
   int capacity = Capacity();
   int pos = 0;
+  // 存储有效元素的序号
   for (int i = 0; i < capacity; i++) {
     if (IsKey(KeyAt(i))) {
       enumeration_order->set(pos++, Smi::FromInt(DetailsAt(i).index()));
@@ -5391,18 +5446,37 @@ Object* Dictionary::GenerateNewEnumerationIndices() {
   }
 
   // Sort the arrays wrt. enumeration order.
+  /*
+    对enumeration_order进行排序,iteration_order元素的位置发生相应变化
+    即按照枚举序号进行排序
+    iteration_order = [0,1,2]
+    enumeration_order = [5,6,4]
+    排序后
+    iteration_order = [2,0,1]
+    enumeration_order = [4,5,6] 
+    iteration_order记录了原来的位置，所以2记录了4原来所在的相对位置（因为可能有空洞，所以不一定是绝对问题），
+    4现在是最小的，所以原来第二个位置的元素序号最小 
+  */
   iteration_order->SortPairs(enumeration_order);
 
   // Overwrite the enumeration_order with the enumeration indices.
   for (int i = 0; i < length; i++) {
+    // 获取元素之前的相对位置
     int index = Smi::cast(iteration_order->get(i))->value();
+    // 重新生成序号
     int enum_index = PropertyDetails::kInitialIndex + i;
+    // 更新对应位置的序号
     enumeration_order->set(index, Smi::FromInt(enum_index));
   }
 
   // Update the dictionary with new indices.
   capacity = Capacity();
+  /*
+    pos用于处理字典中元素的绝对位置到相对位置的映射，
+    如[1, null, 3] 和[1,2]，那么更新第三个元素的时候，得到的值是2
+  */
   pos = 0;
+  // 遍历每个元素，更新有效元素的枚举序号
   for (int i = 0; i < capacity; i++) {
     if (IsKey(KeyAt(i))) {
       int enum_index = Smi::cast(enumeration_order->get(pos++))->value();
@@ -5414,6 +5488,7 @@ Object* Dictionary::GenerateNewEnumerationIndices() {
   }
 
   // Set the next enumeration index.
+  // 下一个可用的序号
   SetNextEnumerationIndex(PropertyDetails::kInitialIndex+length);
   return this;
 }
@@ -5421,12 +5496,14 @@ Object* Dictionary::GenerateNewEnumerationIndices() {
 
 Object* Dictionary::EnsureCapacity(int n, Key* key) {
   // Check whether there is enough enumeration indices for adding n elements.
+  // 序号不够用了，需要重新排序，利用没有被回收的序号
   if (key->IsStringKey() &&
       !PropertyDetails::IsValidIndex(NextEnumerationIndex() + n)) {
     // If not, we generate new indices for the properties.
     Object* result = GenerateNewEnumerationIndices();
     if (result->IsFailure()) return result;
   }
+  // 调用父类的方法
   return DictionaryBase::EnsureCapacity(n, key);
 }
 
@@ -5438,26 +5515,35 @@ void Dictionary::RemoveNumberEntries(uint32_t from, uint32_t to) {
   int removed_entries = 0;
   Object* sentinel = Heap::null_value();
   int capacity = Capacity();
+  // 遍历所有元素
   for (int i = 0; i < capacity; i++) {
+    // 找到元素的首地址，分为三个指针，分别是key、value、detail
     Object* key = KeyAt(i);
     if (key->IsNumber()) {
       uint32_t number = static_cast<uint32_t>(key->Number());
+      // 命中则设置对应的索引的值，key、value、detail分别为null、null、0
       if (from <= number && number < to) {
         SetEntry(i, sentinel, sentinel, Smi::FromInt(0));
+        // 记录被删除的元素个数
         removed_entries++;
       }
     }
   }
 
   // Update the number of elements.
+  // 重新设置已使用元素的个数
   SetNumberOfElements(NumberOfElements() - removed_entries);
 }
 
 
 Object* Dictionary::DeleteProperty(int entry) {
+  // 获取该元素的属性信息
   PropertyDetails details = DetailsAt(entry);
+  // 该元素是否可以删除
   if (details.IsDontDelete()) return Heap::false_value();
+  // 可以删除则设置为无效元素
   SetEntry(entry, Heap::null_value(), Heap::null_value(), Smi::FromInt(0));
+  // 已使用元素减一
   ElementRemoved();
   return Heap::true_value();
 }
@@ -5476,9 +5562,11 @@ int Dictionary::FindNumberEntry(uint32_t index) {
 
 
 Object* Dictionary::AtPut(Key* key, Object* value) {
+  // 根据key判断是否可以找到对应的项
   int entry = FindEntry(key);
 
   // If the entry is present set the value;
+  // 已经存在则更新值
   if (entry != -1) {
     ValueAtPut(entry, value);
     return this;
@@ -5487,9 +5575,11 @@ Object* Dictionary::AtPut(Key* key, Object* value) {
   // Check whether the dictionary should be extended.
   Object* obj = EnsureCapacity(1, key);
   if (obj->IsFailure()) return obj;
+  // 拿到key
   Object* k = key->GetObject();
   if (k->IsFailure()) return k;
   PropertyDetails details = PropertyDetails(NONE, NORMAL);
+  // 新增一个元素到字典
   Dictionary::cast(obj)->AddEntry(k, value, details, key->Hash());
   return obj;
 }
@@ -5512,17 +5602,23 @@ void Dictionary::AddEntry(Object* key,
                           Object* value,
                           PropertyDetails details,
                           uint32_t hash) {
+  // 找出插入的相对位置
   uint32_t entry = FindInsertionEntry(key, hash);
   // Insert element at empty or deleted entry
+  // index记录元素枚举时的顺序，如果是0则赋值
   if (details.index() == 0 && key->IsString()) {
     // Assign an enumeration index to the property and update
     // SetNextEnumerationIndex.
+    // 获取下一个枚举序号
     int index = NextEnumerationIndex();
     details = PropertyDetails(details.attributes(), details.type(), index);
+    // 更新下一个可用序号
     SetNextEnumerationIndex(index + 1);
   }
+  // 真正设置内容
   SetEntry(entry, key, value, details);
   ASSERT(KeyAt(entry)->IsNumber() || KeyAt(entry)->IsString());
+  // 已使用元素加一
   ElementAdded();
 }
 
@@ -5591,7 +5687,7 @@ Object* Dictionary::SetOrAddStringEntry(String* key,
   return this;
 }
 
-
+// 找出不符合某属性的元素个数
 int Dictionary::NumberOfElementsFilterAttributes(PropertyAttributes filter) {
   int capacity = Capacity();
   int result = 0;
@@ -5605,7 +5701,7 @@ int Dictionary::NumberOfElementsFilterAttributes(PropertyAttributes filter) {
   return result;
 }
 
-
+// 可以枚举的元素个数
 int Dictionary::NumberOfEnumElements() {
   return NumberOfElementsFilterAttributes(
       static_cast<PropertyAttributes>(DONT_ENUM));
@@ -5626,7 +5722,7 @@ void Dictionary::CopyKeysTo(FixedArray* storage, PropertyAttributes filter) {
   ASSERT(storage->length() >= index);
 }
 
-
+// 复制可枚举元素的key和detail到新数组
 void Dictionary::CopyEnumKeysTo(FixedArray* storage, FixedArray* sort_array) {
   ASSERT(storage->length() >= NumberOfEnumElements());
   int capacity = Capacity();
@@ -5635,6 +5731,7 @@ void Dictionary::CopyEnumKeysTo(FixedArray* storage, FixedArray* sort_array) {
      Object* k = KeyAt(i);
      if (IsKey(k)) {
        PropertyDetails details = DetailsAt(i);
+       // 可以枚举
        if (!details.IsDontEnum()) {
          storage->set(index, k);
          sort_array->set(index, Smi::FromInt(details.index()));
@@ -5642,6 +5739,7 @@ void Dictionary::CopyEnumKeysTo(FixedArray* storage, FixedArray* sort_array) {
        }
      }
   }
+  // storage的内容排序，sort_array的元素位置也发生相应的变化
   storage->SortPairs(sort_array);
   ASSERT(storage->length() >= index);
 }
