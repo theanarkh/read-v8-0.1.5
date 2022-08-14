@@ -397,7 +397,7 @@ void** v8::HandleScope::CreateHandle(void* value) {
       // Add the extension to the global list of blocks, but count the
       // extension as part of the current scope.
       thread_local.Blocks()->Add(result);
-      // 申请了第一块后，又额外申请的块数
+      // 本 HandleScope 中申请的块数，离开本 HandleScope 后会被回收
       current_.extensions++;
       current_.limit = &result[i::kHandleBlockSize];
     }

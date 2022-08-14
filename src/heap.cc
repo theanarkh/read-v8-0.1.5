@@ -585,6 +585,14 @@ void Heap::Scavenge() {
   // scavenge collector agnostic to the allocation strategy (eg, linear or
   // free-list) used in old space.
   // 空闲区的头尾指针
+  // | ....... | ..........
+  // to       from
+  // age_mark
+  //      | | Flip
+  //       V
+  // | ....... | ..........
+  // from      to
+  //           new_mark    promoted_mark
   Address new_mark = new_space_->ToSpaceLow();
   Address promoted_mark = new_space_->ToSpaceHigh();
   promoted_top = new_space_->ToSpaceHigh();
